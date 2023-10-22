@@ -1,5 +1,8 @@
-// Import database connection with mysql2
-//    -   const db = require('../db/connection');
+
+/***************************************
+ *  MySQL Database Connection
+ * ************************************/
+const dbQueryPromise = require('../db/dbconnect'); // Import dbconnect.js
 
 
 //Define User related Controller functions

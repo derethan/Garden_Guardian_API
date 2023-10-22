@@ -15,6 +15,9 @@ app.use(express.json());
 app.use('/users', userRoutes);
 app.use('/sensors', sensorRoutes);
 
+// Configure dotenv
+const dotenv = require('dotenv');
+dotenv.config({ path: './.env' });
 
 // Start the server
 const port = 3000;
