@@ -5,8 +5,15 @@
 const dbQueryPromise = require('../db/dbconnect'); // Import dbconnect.js
 
 
-//Define User related Controller functions
-
+/***************************************
+ *  Define function below to handle the routed requests
+ * 
+ *  Each function requires the corresponding route in the userRoutes.js file
+ *      - router.post('/login', userController.login);
+ *
+ *  
+ *  Below are Sample functions to handle the routed requests 
+ * ************************************/
 // Register a new user
 async function register(req, res) {
     // Implement user registration logic, e.g., insert user data into the database.
@@ -32,5 +39,5 @@ async function register(req, res) {
   
   module.exports = {
     register,
-    login,
+    login
   };
