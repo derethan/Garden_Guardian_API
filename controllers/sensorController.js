@@ -30,10 +30,15 @@ async function storeSensorData(req, res) {
 
 async function sendDataToClient (req, res) {
   // Implement sensor data storage logic, e.g., write data to the database.
+
+}
+
+async function testconnection (req, res) {
+  // Implement sensor data storage logic, e.g., write data to the database.
   try {
     // Database operation here
     console.log('Sending data to client');
-    res.status(201).json({ message: 'This is a Test Message from the Server' });
+    res.status(201).json({ message: 'Connection to the GardenGuardian Network succesfull' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Responce Failed' });
@@ -45,5 +50,6 @@ async function sendDataToClient (req, res) {
 // Export the functions
 module.exports = {
   storeSensorData,
-  sendDataToClient
+  sendDataToClient,
+  testconnection
 };

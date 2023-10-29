@@ -8,4 +8,6 @@ router.post('/store', sensorController.storeSensorData);
 // Define a GET route to retrieve sensor data
 router.get('/retrieve', sensorController.sendDataToClient);
 
+router.get('/testconnection', sensorController.testconnection);
+
 module.exports = router;

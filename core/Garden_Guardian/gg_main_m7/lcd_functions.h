@@ -84,30 +84,61 @@ void displayAmbientTemp(float ambientTemp) {
 }
 
 
-// Function to display relay status
-void displayRelayStatus(int RELAY_PIN) {
-    // Clear the LCD
-    lcd.clear();
+
+// Function to display Heater Relay Screen
+void displayHeaterStatus(int RELAY_PIN, float temperature, float targetTemperature) {
     // Read relay status
     int relayStatus = digitalRead(RELAY_PIN);
-    // Display the data on the LCD
+    
+    // Clear the LCD
+    lcd.clear();
+
+    // Display the Title on the LCD
     lcd.setCursor(0, 0);
     lcd.write(byte(4));
     lcd.setCursor(2, 0);
-    lcd.print("Relay #1  Status");
+
+    if (relayStatus == LOW) {
+        lcd.print("Heater is ON");
+    } else {
+        lcd.print("Heater is OFF");
+    }
     lcd.setCursor(19, 0);
     lcd.write(byte(5));
     lcd.setCursor(0, 1);
     for (int i = 0; i < 20; i++) {
         lcd.write(byte(3));  // Display the custom character Line 20 times
     }
-    lcd.setCursor(0, 2);
-    if (relayStatus == LOW) {
-        lcd.print("Heater is ON");
-    } else {
-        lcd.print("Heater is OFF");
-    }
+
+        lcd.setCursor(0, 2);
+        lcd.print("Temp: " + String(temperature) + " C");
+
+        lcd.setCursor(0, 3);
+        lcd.print("Target: " + String(targetTemperature) + " C");
 }
+
+//Function to display the change Target Temperature Screen
+void displayTempChange (float targetTemperature){
+
+    // Clear the LCD
+    lcd.clear();
+
+    //Display the Tearget Temperature on the LCD
+    lcd.setCursor(0, 0);
+    lcd.write(byte(4));
+    lcd.setCursor(2, 0);
+    lcd.print("Set Temperature");
+    lcd.setCursor(19, 0);
+    lcd.write(byte(5));
+    lcd.setCursor(0, 1);
+    for (int i = 0; i < 20; i++) {
+        lcd.write(byte(3));  // Display the custom character Line 20 times
+    }
+
+    lcd.setCursor(0, 2);
+    lcd.print("Temperature: " + String(targetTemperature) + " C");
+}
+
 
 // Function to display water flow data
 void displayWaterFlow() {
