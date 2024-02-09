@@ -2,7 +2,7 @@
 GardenGuardian API Server 
 
 ## What is it?
-Handles Data Exchange between our Custom IOT device, the API and the Database's
+The API Server Handles Data Exchange between our Custom IOT device, the MySQL Database, the Influx Database and the Front-End.
 
 ### How to use?
 
