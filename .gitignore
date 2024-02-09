@@ -3,3 +3,5 @@ start node server.bat
 index copy.js
 .env
 core/BAMF_Grow_Sensor/arduino_secrets.h
+.env
+.env
