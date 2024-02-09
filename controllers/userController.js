@@ -2,7 +2,7 @@
 /***************************************
  *  MySQL Database Connection
  * ************************************/
-const dbQueryPromise = require('../db/dbconnect'); // Import dbconnect.js
+const dbQueryPromise = require('../db/dbConnect'); // Import dbconnect.js
 
 
 /***************************************
