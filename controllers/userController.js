@@ -6,18 +6,31 @@ const dbQueryPromise = require('../db/dbConnect'); // Import dbconnect.js
 
 
 /***************************************
- *  Define function below to handle the routed requests
- * 
+ *  Define functions below to handle the routed requests
+ *
  *  Each function requires the corresponding route in the userRoutes.js file
  *      - router.post('/login', userController.login);
  *
- *  
- *  Below are Sample functions to handle the routed requests 
  * ************************************/
+
+// Handle Password Hashing:
+const crypto = require('crypto');
+
+const hashPassword = (password) => {
+}
+
+
 // Register a new user
 async function register(req, res) {
-    // Implement user registration logic, e.g., insert user data into the database.
-    try {
+
+  console.log(req.body);
+
+  // Extract the request data
+  const { username, email, password } = req.body;
+
+  // Hash Password
+
+  try {
       // Database operation here
       res.status(201).json({ message: 'User registered successfully' });
     } catch (error) {
