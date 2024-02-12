@@ -3,14 +3,6 @@
  * ************************************/
 const dbQueryPromise = require("../db/dbConnect"); // Import dbconnect.js
 
-/***************************************
- *  Define functions below to handle the routed requests
- *
- *  Each function requires the corresponding route in the userRoutes.js file
- *      - router.post('/login', userController.login);
- *
- * ************************************/
-
 // Handle Password Hashing:
 const crypto = require("crypto");
 
@@ -34,6 +26,23 @@ const verifyPassword = (password, storedPassword) => {
   return originalHash === verifyHash;
 };
 
+// Check if email already exists
+async function emailExists(email) {
+  const sql = "SELECT * FROM users WHERE email = ?";
+  const VALUES = [email];
+
+  const result = await dbQueryPromise(sql, VALUES);
+
+  return result.length > 0 ? true : false; // If the email exists, return true
+}
+
+const messages = {
+  emailExists:
+    "A user has already registered with this email address, Please enter another email address to continue.",
+  registerSuccess: "User registered successfully",
+  dbconnectError: "There was an error updating the database",  
+};
+
 // Register a new user
 async function register(req, res) {
   // Extract the request data
@@ -42,18 +51,26 @@ async function register(req, res) {
   // Hash Password
   const hashedPassword = hashPassword(password);
 
+  // Check if the email already exists
+  const emailAlreadyExists = await emailExists(email);
+
+  if (emailAlreadyExists) {
+    return res.status(409).json({ message: messages.emailExists });
+  }
+
+  // Attempt to register the user in the database
   try {
-    // Submit the data to the database
     const sql =
       "INSERT INTO users (firstname, lastname, email, password) VALUES (?, ?, ?, ?)";
     const VALUES = [firstName, lastName, email, hashedPassword];
 
     await dbQueryPromise(sql, VALUES);
 
-    res.status(201).json({ message: "User registered successfully" });
+    res.status(201).json({ message: messages.registerSuccess });
     console.log("User registered successfully");
+
   } catch (error) {
-    console.error("There was an error updating the database", error);
+    console.error(dbconnectError, error);
     res.status(500).json({ message: "Registration failed" });
   }
 }
