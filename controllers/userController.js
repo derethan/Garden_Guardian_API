@@ -1,9 +1,26 @@
 /***************************************
+ *  User Controller
+ * ************************************/
+
+const jwt = require("jsonwebtoken");
+
+const messages = {
+  emailExists:
+    "A user has already registered with this email address, Please enter another email address to continue.",
+  noEmailExists: "No account is registered with this email address",
+  registerSuccess: "User registered successfully",
+  loginSuccess: "User logged in successfully",
+  dbconnectError: "There was an error updating the database",
+};
+
+/***************************************
  *  MySQL Database Connection
  * ************************************/
 const dbQueryPromise = require("../db/dbConnect"); // Import dbconnect.js
 
-// Handle Password Hashing:
+/***************************************
+ *  Password Hashing and Verification
+ * ************************************/
 const crypto = require("crypto");
 
 const hashPassword = (password) => {
@@ -16,6 +33,9 @@ const hashPassword = (password) => {
   return [salt, hash].join("$");
 };
 
+/***************************************
+ *  Data Verification Functions
+ * ************************************/
 const verifyPassword = (password, storedPassword) => {
   const [salt, originalHash] = storedPassword.split("$"); // Split the stored password into salt and hash
   const iterations = 10000;
@@ -36,14 +56,19 @@ async function emailExists(email) {
   return result.length > 0 ? true : false; // If the email exists, return true, else return false
 }
 
-const messages = {
-  emailExists:
-    "A user has already registered with this email address, Please enter another email address to continue.",
-  noEmailExists: "No account is registered with this email address",
-  registerSuccess: "User registered successfully",
-  loginSuccess: "User logged in successfully",
-  dbconnectError: "There was an error updating the database",
-};
+async function getUser(email) {
+  const sql = "SELECT * FROM users WHERE email = ?";
+  const VALUES = [email];
+
+  return dbQueryPromise(sql, VALUES);
+}
+
+async function updateTimestamp(email) {
+  const sql = "UPDATE users SET last_login = NOW() WHERE email = ?";
+  const VALUES = [email];
+
+  return dbQueryPromise(sql, VALUES);
+}
 
 /***************************************
  *  User Registration Route
@@ -78,19 +103,6 @@ async function register(req, res) {
   }
 }
 
-async function getUser(email) {
-  const sql = "SELECT * FROM users WHERE email = ?";
-  const VALUES = [email];
-
-  return await dbQueryPromise(sql, VALUES);
-}
-
-function updateTimestamp(email) {
-  const sql = 'UPDATE users SET last_login = NOW() WHERE email = ?';
-  const VALUES = [email];
-
-  dbQueryPromise(sql, VALUES);
-}
 /***************************************
  *  User Login Route
  **************************************/
@@ -108,6 +120,7 @@ async function login(req, res) {
   try {
     // Get the user from the database
     const user = await getUser(email);
+    const userName = user[0].firstname + " " + user[0].lastname;
 
     // Verify the password with the stored password
     const storedPassword = user[0].password;
@@ -120,9 +133,29 @@ async function login(req, res) {
     }
 
     // Update the last login timestamp
-    updateTimestamp(email);
+    try {
+      await updateTimestamp(email);
+    } catch (error) {
+      console.error(messages.dbconnectError, error);
+      res.status(500).json({ message: messages.dbconnectError });
+    }
 
-    res.status(201).json({ message: messages.loginSuccess });
+    // Generate a token placeholder
+    const token = jwt.sign({ id: user[0].id }, process.env.TOKEN_SECRET, {
+      expiresIn: "1h",
+    });
+
+    // Return the data to the client
+    res.status(201).json({
+      token: token,
+      user: {
+        id: user[0].id,
+        name: userName,
+        email: user[0].email,
+      },
+      message: messages.loginSuccess,
+    });
+
     console.log(email, "Logged in successfully at: " + new Date());
   } catch (error) {
     console.error(messages.dbconnectError, error);
@@ -130,7 +163,42 @@ async function login(req, res) {
   }
 }
 
+
+/***************************************
+ *  Protected Route handler
+ **************************************/
+async function protectedRoute(req, res) {
+
+
+
+    res.json({ message: 'Protected route accessed successfully' });
+}
+
+function verifyToken (req, res, next) {
+  const token = req.headers.authorization;
+
+  // If the token is not provided, return an error
+  if (!token) {
+    return res.status(403).json({ message: "No token provided" });
+  }
+
+  // Verify the token
+  jwt.verify(token, process.env.TOKEN_SECRET, (error, decoded) => {
+    if (error) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    req.userId = decoded.id; // Add the user id to the request object
+    next(); // Continue to the next middleware
+  });
+    
+}
+/***************************************
+ *  Export the functions
+ **************************************/
 module.exports = {
   register,
   login,
+  protectedRoute,
+  verifyToken
 };
