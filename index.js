@@ -3,6 +3,7 @@
 const express = require('express');
 const app = express();
 
+
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 
@@ -14,10 +15,17 @@ app.use(cors());
 const userRoutes = require('./routes/userRoutes');
 const sensorRoutes = require('./routes/sensorRoutes.js');
 
+// Add headers
+app.use((req, res, next) => {
+    res.header('Access-Control-Expose-Headers', 'Authorization');
+    next();
+  });
+
 //Define Middleware and Routes
 app.use(express.json());
 app.use('/users', userRoutes);
 app.use('/sensors', sensorRoutes);
+
 
 // Configure dotenv
 const dotenv = require('dotenv');

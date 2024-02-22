@@ -56,6 +56,7 @@ async function emailExists(email) {
   return result.length > 0 ? true : false; // If the email exists, return true, else return false
 }
 
+// Get user from the database
 async function getUser(email) {
   const sql = "SELECT * FROM users WHERE email = ?";
   const VALUES = [email];
@@ -63,6 +64,7 @@ async function getUser(email) {
   return dbQueryPromise(sql, VALUES);
 }
 
+// Update the last login timestamp
 async function updateTimestamp(email) {
   const sql = "UPDATE users SET last_login = NOW() WHERE email = ?";
   const VALUES = [email];
@@ -122,14 +124,15 @@ async function login(req, res) {
     const user = await getUser(email);
     const userName = user[0].firstname + " " + user[0].lastname;
 
+
     // Verify the password with the stored password
     const storedPassword = user[0].password;
     const passwordIsValid = verifyPassword(password, storedPassword);
 
     // If the password is invalid, return an error
     if (!passwordIsValid) {
-      console.log("Invalid password");
-      return res.status(401).json({ message: "Invalid password" });
+      console.log("Invalid Credientials, please try again.");
+      return res.status(401).json({ message: "Invalid Credientials, please try again." });
     }
 
     // Update the last login timestamp
@@ -140,14 +143,14 @@ async function login(req, res) {
       res.status(500).json({ message: messages.dbconnectError });
     }
 
-    // Generate a token placeholder
+
+    // Generate a token
     const token = jwt.sign({ id: user[0].id }, process.env.TOKEN_SECRET, {
       expiresIn: "1h",
     });
 
     // Return the data to the client
-    res.status(201).json({
-      token: token,
+    res.header('Authorization', 'Bearer ' + token).status(201).json({
       user: {
         id: user[0].id,
         name: userName,
@@ -169,29 +172,40 @@ async function login(req, res) {
  **************************************/
 async function protectedRoute(req, res) {
 
-
-
-    res.json({ message: 'Protected route accessed successfully' });
+  //Handle protected route functions here, decode token and determine authorization based on token data
+  res.json({ message: 'Protected route accessed successfully' });
 }
 
+
+/***************************************
+ * Token Verification Middleware
+ * ************************************/
 function verifyToken (req, res, next) {
-  const token = req.headers.authorization;
+  // Get the token from the request headers
+  const tokenHeader = req.headers.authorization;
+
+  const token = tokenHeader.split(' ')[1];
 
   // If the token is not provided, return an error
   if (!token) {
     return res.status(403).json({ message: "No token provided" });
   }
-
+  
   // Verify the token
   jwt.verify(token, process.env.TOKEN_SECRET, (error, decoded) => {
+
     if (error) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     req.userId = decoded.id; // Add the user id to the request object
+    req.token = token; // Add the token to the request object
+    
     next(); // Continue to the next middleware
   });
     
+
+
 }
 /***************************************
  *  Export the functions
