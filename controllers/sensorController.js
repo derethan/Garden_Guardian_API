@@ -18,6 +18,11 @@
 
 async function storeSensorData(req, res) {
   // Implement sensor data storage logic, e.g., write data to the database.
+
+  //Store data from post request
+  const data = req.body;
+  console.log(data);
+
   try {
     // Database operation here
     res.status(201).json({ message: 'Sensor data stored successfully' });
