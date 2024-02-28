@@ -33,6 +33,6 @@ dotenv.config({ path: './.env' });
 
 // Start the server
 const port = 3000;
-const host = '127.0.0.1';
+const host = '0.0.0.0';
 app.listen(port, host);
 console.log(`Listening at http://${host}:${port}`);
