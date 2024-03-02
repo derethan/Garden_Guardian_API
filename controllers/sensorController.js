@@ -5,6 +5,11 @@
 //const influx = require('../influx'); // Use the appropriate library for your database
 
 /***************************************
+ *  MySQL Database Connection
+ * ************************************/
+const dbQueryPromise = require("../db/dbConnect"); // Import dbconnect.js
+
+/***************************************
  *  Sensor Route Handler to store
  * sensor Data from Garden Gardian Device
  * ************************************/
@@ -35,7 +40,6 @@ async function storeSensorData(req, res) {
       console.log("Reading Time:", readTime);
       console.log("=======================================");
     });
-
   });
 
   try {
@@ -56,17 +60,56 @@ async function sendDataToClient(req, res) {
  * and GardenGuardian Device
  * ************************************/
 async function testconnection(req, res) {
-  // Implement sensor data storage logic, e.g., write data to the database.
+  // Gett he device ID from the route
+  let deviceID = req.query.deviceID;
+
   try {
-    // Database operation here
-    console.log("Sending data to client");
+    // Check if the device exists in the database
+    const deviceExists = await checkdeviceID(deviceID);
+
+    // If the device does not exist, add it to the database
+    if (!deviceExists) {
+      const result = addDevice(deviceID);
+      if (result) {
+        console.log(deviceID + " added to the database");
+      } else {
+        console.log("Failed to add device to the database");
+      }
+    }
+
     res
       .status(201)
       .json({ message: "Connection to the GardenGuardian Network succesfull" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Responce Failed" });
+    res.status(500).json({ message: "There was an error communication with the server" });
   }
+}
+
+/***************************************
+ * Function to Add and verify The devices in the database
+ * ************************************/
+
+// Check if the device exists in the database
+async function checkdeviceID(deviceID) {
+  // Check if the device exists in the database
+  const sql = "SELECT * FROM devices WHERE device_id = ?";
+  const VALUES = [deviceID];
+
+  const deviceExists = await dbQueryPromise(sql, VALUES);
+
+  return deviceExists.length > 0 ? true : false;
+}
+
+// Add the device to the database
+async function addDevice(deviceID) {
+  // Add the device to the database
+  const sql = "INSERT INTO devices (device_id) VALUES (?)";
+  const VALUES = [deviceID];
+
+  const result = await dbQueryPromise(sql, VALUES);
+
+  return result;
 }
 
 // Export the functions
