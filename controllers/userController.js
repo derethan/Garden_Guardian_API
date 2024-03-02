@@ -145,7 +145,7 @@ async function login(req, res) {
 
 
     // Generate a token
-    const token = jwt.sign({ id: user[0].id }, process.env.TOKEN_SECRET, {
+    const token = jwt.sign({ id: user[0].id, name: userName, email: user[0].email }, process.env.TOKEN_SECRET, {
       expiresIn: "1h",
     });
 
@@ -178,7 +178,7 @@ async function protectedRoute(req, res) {
 
 
 /***************************************
- * Token Verification Middleware
+ * Token Verification Route Middleware
  * ************************************/
 function verifyToken (req, res, next) {
   // Get the token from the request headers
@@ -199,14 +199,42 @@ function verifyToken (req, res, next) {
     }
 
     req.userId = decoded.id; // Add the user id to the request object
+    req.userName = decoded.name; // Add the user name to the request object
+    req.userEmail = decoded.email; // Add the user email to the request object
     req.token = token; // Add the token to the request object
     
     next(); // Continue to the next middleware
   });
-    
-
-
 }
+
+/***************************************
+ *  Device Routes
+ **************************************/
+
+// Route for Adding a new device 
+async function addDevice(req, res) {
+
+  //extract the headers
+  const tokenHeader = req.headers.authorization;
+  const token = tokenHeader.split(' ')[1];
+
+  // extract the user email as user_id from the token
+  const decoded = jwt.decode(token);
+  const user_id = decoded.email;
+  const db_ID = decoded.id;
+  
+  // Extract the request data
+  const { device_id, device_name } = req.body;
+
+  //log
+  console.log("Device ID: " + device_id + " Device Name: " + device_name + " User ID: " + user_id);
+
+  // Attempt to register the device in the database
+}
+
+
+
+
 /***************************************
  *  Export the functions
  **************************************/
@@ -214,5 +242,6 @@ module.exports = {
   register,
   login,
   protectedRoute,
-  verifyToken
+  verifyToken,
+  addDevice
 };
