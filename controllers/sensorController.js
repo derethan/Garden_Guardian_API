@@ -60,10 +60,10 @@ async function sendDataToClient(req, res) {
  * and GardenGuardian Device
  * ************************************/
 async function testconnection(req, res) {
-  // Gett he device ID from the route
-  let deviceID = req.query.deviceID;
-
   try {
+    // Get the device ID from the route
+    let deviceID = req.query.deviceID;
+
     // Check if the device exists in the database
     const deviceExists = await checkdeviceID(deviceID);
 
@@ -82,7 +82,9 @@ async function testconnection(req, res) {
       .json({ message: "Connection to the GardenGuardian Network succesfull" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "There was an error communication with the server" });
+    res
+      .status(500)
+      .json({ message: "There was an error communication with the server" });
   }
 }
 
