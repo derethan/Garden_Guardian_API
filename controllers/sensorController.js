@@ -119,4 +119,5 @@ module.exports = {
   storeSensorData,
   sendDataToClient,
   testconnection,
+  checkdeviceID,
 };
