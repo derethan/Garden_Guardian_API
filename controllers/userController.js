@@ -124,7 +124,6 @@ async function login(req, res) {
     const user = await getUser(email);
     const userName = user[0].firstname + " " + user[0].lastname;
 
-
     // Verify the password with the stored password
     const storedPassword = user[0].password;
     const passwordIsValid = verifyPassword(password, storedPassword);
@@ -132,7 +131,9 @@ async function login(req, res) {
     // If the password is invalid, return an error
     if (!passwordIsValid) {
       console.log("Invalid Credientials, please try again.");
-      return res.status(401).json({ message: "Invalid Credientials, please try again." });
+      return res
+        .status(401)
+        .json({ message: "Invalid Credientials, please try again." });
     }
 
     // Update the last login timestamp
@@ -143,21 +144,27 @@ async function login(req, res) {
       res.status(500).json({ message: messages.dbconnectError });
     }
 
-
     // Generate a token
-    const token = jwt.sign({ id: user[0].id }, process.env.TOKEN_SECRET, {
-      expiresIn: "1h",
-    });
+    const token = jwt.sign(
+      { id: user[0].id, name: userName, email: user[0].email },
+      process.env.TOKEN_SECRET,
+      {
+        expiresIn: "1h",
+      }
+    );
 
     // Return the data to the client
-    res.header('Authorization', 'Bearer ' + token).status(201).json({
-      user: {
-        id: user[0].id,
-        name: userName,
-        email: user[0].email,
-      },
-      message: messages.loginSuccess,
-    });
+    res
+      .header("Authorization", "Bearer " + token)
+      .status(201)
+      .json({
+        user: {
+          id: user[0].id,
+          name: userName,
+          email: user[0].email,
+        },
+        message: messages.loginSuccess,
+      });
 
     console.log(email, "Logged in successfully at: " + new Date());
   } catch (error) {
@@ -166,47 +173,108 @@ async function login(req, res) {
   }
 }
 
-
 /***************************************
  *  Protected Route handler
  **************************************/
 async function protectedRoute(req, res) {
+    //Handle protected route functions here, decode token and determine authorization based on token data
 
-  //Handle protected route functions here, decode token and determine authorization based on token data
-  res.json({ message: 'Protected route accessed successfully' });
+
+  //Send the New Token to the client
+  return res
+    .header("Authorization", "Bearer " + req.token)
+    .status(201)
+    .json({ message: "Protected route accessed successfully" });
 }
 
-
 /***************************************
- * Token Verification Middleware
+ * Token Verification Route Middleware
  * ************************************/
-function verifyToken (req, res, next) {
+function verifyToken(req, res, next) {
   // Get the token from the request headers
   const tokenHeader = req.headers.authorization;
 
-  const token = tokenHeader.split(' ')[1];
+  let token = tokenHeader.split(" ")[1];
 
   // If the token is not provided, return an error
   if (!token) {
     return res.status(403).json({ message: "No token provided" });
   }
-  
+
   // Verify the token
   jwt.verify(token, process.env.TOKEN_SECRET, (error, decoded) => {
+    const tokenData = jwt.decode(token);
 
     if (error) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+      //If the token has expired
+      if (error instanceof jwt.TokenExpiredError) {
+        //Check when the Token expired
+        const expiredTime = error.expiredAt.getTime() / 1000;
+        const currentTime = Math.floor(Date.now() / 1000);
 
-    req.userId = decoded.id; // Add the user id to the request object
+        //If the token has been expired for more then 7 days, return an error
+        if (currentTime - expiredTime > 604800) {
+          return res
+            .status(401)
+            .json({ message: "Your session has ended, Please Log in again" });
+        }
+
+        // Otherwise Generate a new token and return it to the client
+        const newToken = jwt.sign(
+          { id: tokenData.id, name: tokenData.name, email: tokenData.email },
+          process.env.TOKEN_SECRET,
+          {
+            expiresIn: "1h",
+          }
+        );
+        token = newToken; // Update the token with the new token
+
+        console.log("Token Expired for user" + tokenData.email + " New Token Generated");
+      } else {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+    } // End of if (error)
+
+    req.userId = tokenData.id; // Add the user id to the request object
+    req.userName = tokenData.name; // Add the user name to the request object
+    req.userEmail = tokenData.email; // Add the user email to the request object
     req.token = token; // Add the token to the request object
-    
+
     next(); // Continue to the next middleware
-  });
-    
+  }); // End of jwt.verify
+} // End of verifyToken
 
+/***************************************
+ *  Device Routes
+ **************************************/
 
+// Route for Adding a new device
+async function addDevice(req, res) {
+  //extract the headers
+  const tokenHeader = req.headers.authorization;
+  const token = tokenHeader.split(" ")[1];
+
+  // extract the user email as user_id from the token
+  const decoded = jwt.decode(token);
+  const user_id = decoded.email;
+  const db_ID = decoded.id;
+
+  // Extract the request data
+  const { device_id, device_name } = req.body;
+
+  //log
+  console.log(
+    "Device ID: " +
+      device_id +
+      " Device Name: " +
+      device_name +
+      " User ID: " +
+      user_id
+  );
+
+  // Attempt to register the device in the database
 }
+
 /***************************************
  *  Export the functions
  **************************************/
@@ -214,5 +282,6 @@ module.exports = {
   register,
   login,
   protectedRoute,
-  verifyToken
+  verifyToken,
+  addDevice,
 };
