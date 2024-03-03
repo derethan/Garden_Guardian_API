@@ -7,6 +7,7 @@ router.post('/register', userController.register);
 router.post('/login', userController.login);
 
 router.post('/addDevice', userController.addDevice);
+router.get ('/checkForDevice', userController.checkForDevice);
 
 router.get('/protected',userController.verifyToken, userController.protectedRoute);
 
