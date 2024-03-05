@@ -179,8 +179,7 @@ async function login(req, res) {
  *  Protected Route handler
  **************************************/
 async function protectedRoute(req, res) {
-    //Handle protected route functions here, decode token and determine authorization based on token data
-
+  //Handle protected route functions here, decode token and determine authorization based on token data
 
   //Send the New Token to the client
   return res
@@ -231,7 +230,9 @@ function verifyToken(req, res, next) {
         );
         token = newToken; // Update the token with the new token
 
-        console.log("Token Expired for user" + tokenData.email + " New Token Generated");
+        console.log(
+          "Token Expired for user" + tokenData.email + " New Token Generated"
+        );
       } else {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -280,7 +281,11 @@ async function addDevice(req, res) {
 
   // If the device does not exist, return an error
   if (!deviceExists) {
-    return res.status(409).json({ message: "No Device has been registered with the ID: " + device_id });
+    return res
+      .status(409)
+      .json({
+        message: "No Device has been registered with the ID: " + device_id,
+      });
   }
 
   // Associate the device with the user in the user_device table
@@ -289,24 +294,24 @@ async function addDevice(req, res) {
 
   try {
     await dbQueryPromise(sql, VALUES);
-    res.status(201).json({ message: "Device has been registered successfully" });
+    res
+      .status(201)
+      .json({ message: "Device has been registered successfully" });
   } catch (error) {
     console.error(messages.dbconnectError, error);
     res.status(500).json({ message: messages.dbconnectError });
   }
-
 }
 
 /***************************************
- *  Check if the user has a device associated 
+ *  Check if the user has a device associated
  * with their account in the user_device table
  * ************************************/
 
-async function checkForDevice (req, res) {
+async function checkForDevice(req, res) {
   //extract the headers
   const tokenHeader = req.headers.authorization;
   const token = tokenHeader.split(" ")[1];
-
 
   // extract the user email as user_id from the token
   const decoded = jwt.decode(token);
@@ -319,13 +324,17 @@ async function checkForDevice (req, res) {
 
   const result = await dbQueryPromise(sql, VALUES);
 
-  //log result
-  console.log(result);
-
   if (result.length > 0) {
-    return res.status(200).json({ message: "User has a device associated with their account" });
+    return res.status(200).json({
+      message: "User has a device associated with their account",
+      status: true,
+      device_id: result[0].device_id,
+    });
   } else {
-    return res.status(409).json({ message: "User does not have a device associated with their account" });
+    return res.status(409).json({
+      message: "User does not have a device associated with their account",
+      status: false,
+    });
   }
 }
 

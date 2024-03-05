@@ -114,10 +114,86 @@ async function addDevice(deviceID) {
   return result;
 }
 
+//A Route Handler to check the status of the device
+async function getDeviceStatus(req, res) {
+  //get the device_id from the header
+  const deviceID = req.headers.device_id;
+
+  try {
+    //check the latest ping timestamp in the devices table for the device
+    const sql = "SELECT last_ping FROM devices WHERE device_id = ?";
+    const VALUES = [deviceID];
+
+    const result = await dbQueryPromise(sql, VALUES);
+
+    //if the device is not found
+    if (result.length === 0) {
+      res.status(404).json({ message: "Device Not Found" });
+    }
+
+    //Get the Last Ping Timestamp
+    const lastPing = result[0].last_ping;
+
+    //Get the current time
+    const currentTime = new Date();
+
+    //Calculate the time difference
+    const timeDifference = currentTime - lastPing;
+
+    //If the time difference is greater than 1 minutes
+    if (timeDifference > 60000) {
+      res.status(201).json({
+        message: "Device is Offline",
+        status: "Offline",
+      });
+    } else {
+      res.status(201).json({
+        message: "Device is Online",
+        status: "online",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "There was an error communication with the Database" });
+  }
+}
+
+//Route handler to recieve Pings from the device and update the latest ping timestamp
+async function updateDevicePing(req, res) {
+  try {
+    const deviceID = req.query.deviceID;
+    console.log("Ping Recieved From ", deviceID);
+
+    // Update the latest ping timestamp
+    const sql =
+      "UPDATE devices SET last_ping = CURRENT_TIMESTAMP WHERE device_id = ?";
+    const VALUES = [deviceID];
+
+    const result = await dbQueryPromise(sql, VALUES);
+
+    if (!result) {
+      console.log("Failed to update the last ping timestamp");
+    }
+
+    res
+      .status(201)
+      .json({ message: "Ping Recieved and Device Status Updated" });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "There was an error communication with the server" });
+  }
+}
+
 // Export the functions
 module.exports = {
   storeSensorData,
   sendDataToClient,
   testconnection,
   checkdeviceID,
+  getDeviceStatus,
+  updateDevicePing,
 };
