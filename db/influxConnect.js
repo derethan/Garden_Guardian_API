@@ -4,13 +4,13 @@
  * ************************************/
 //import the InfluxConnection
 const { InfluxDB } = require("@influxdata/influxdb-client");
+require("dotenv").config();
 
-const token =
-  "W27HQvatOjRtq7wn7QRykCQoT0PTRU6aGE4i06IfsS9R_lkZhRmxO6fZSLsbso5p7gF3sr0G76OXP8q-c4fMfA==";
-const url = "http://192.168.0.150:8086";
+const token = process.env.INFLUX_API;
+const url = process.env.INFLUX_HOST;
 
-let org = "batech";
-let bucket = "sensorData";
+let org = process.env.INFLUX_ORG;
+let bucket = process.env.INFLUX_BUCKET;
 
 //create connection to database
 const InfluxClient = new InfluxDB({ url, token });
@@ -19,7 +19,7 @@ const InfluxClient = new InfluxDB({ url, token });
 const queryAPI = InfluxClient.getQueryApi(org);
 
 //Setup the Write API - Writes data to the database
-const writeApi = InfluxClient.getWriteApi(org, bucket, "ns");
+const writeApi = InfluxClient.getWriteApi(org, bucket, "s");
 
 /***************************************
  *   Function to write data to InfluxDB

@@ -31,7 +31,7 @@ async function testreadDataFromInfluxDB() {
   const resultData = await readDataFromInfluxDB(query);
   console.log(resultData);
 }
-
+testreadDataFromInfluxDB ();
 /***************************************
  *  MySQL Database Connection
  * ************************************/
