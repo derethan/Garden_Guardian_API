@@ -2,12 +2,41 @@
  *  Influx Database Connection
  *  - Used for storing sensor data and other time-series data
  * ************************************/
-//const influx = require('../influx'); // Use the appropriate library for your database
+
+//import the InfluxConnection
+const {writeDataToInfluxDB, readDataFromInfluxDB} = require("../db/influxConnect");
+const { Point } = require('@influxdata/influxdb-client');
+
+
+let sensorType = "DHT";
+let sensorName = "Sensor1";
+let temperature = 22; // in Celsius
+let humidity = 33; // in percentage
+let location = "Garden";
+let deviceName = "GG-001";
+
+const point = new Point("DHT Sensor1")
+.tag("sensorType", sensorType)
+.tag("sensorName", sensorName)
+.tag("location", location)
+.tag("deviceName", deviceName)
+.floatField("temperature", temperature)
+.floatField("humidity", humidity);
+
+
+
+async function testreadDataFromInfluxDB() {
+  const query = `from(bucket: "sensorData") |> range(start: -30m) |> filter(fn: (r) => r._measurement == "DHT Sensor1")`;
+
+  const resultData = await readDataFromInfluxDB(query);
+  console.log(resultData);
+}
 
 /***************************************
  *  MySQL Database Connection
  * ************************************/
 const dbQueryPromise = require("../db/dbConnect"); // Import dbconnect.js
+const { text } = require("express");
 
 /***************************************
  *  Sensor Route Handler to store
