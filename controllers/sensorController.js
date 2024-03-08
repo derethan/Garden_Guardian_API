@@ -4,26 +4,11 @@
  * ************************************/
 
 //import the InfluxConnection
-const {writeDataToInfluxDB, readDataFromInfluxDB} = require("../db/influxConnect");
-const { Point } = require('@influxdata/influxdb-client');
-
-
-let sensorType = "DHT";
-let sensorName = "Sensor1";
-let temperature = 22; // in Celsius
-let humidity = 33; // in percentage
-let location = "Garden";
-let deviceName = "GG-001";
-
-const point = new Point("DHT Sensor1")
-.tag("sensorType", sensorType)
-.tag("sensorName", sensorName)
-.tag("location", location)
-.tag("deviceName", deviceName)
-.floatField("temperature", temperature)
-.floatField("humidity", humidity);
-
-
+const {
+  writeDataToInfluxDB,
+  readDataFromInfluxDB,
+} = require("../db/influxConnect");
+const { Point } = require("@influxdata/influxdb-client");
 
 async function testreadDataFromInfluxDB() {
   const query = `from(bucket: "sensorData") |> range(start: -30m) |> filter(fn: (r) => r._measurement == "DHT Sensor1")`;
@@ -31,13 +16,13 @@ async function testreadDataFromInfluxDB() {
   const resultData = await readDataFromInfluxDB(query);
   console.log(resultData);
 }
-testreadDataFromInfluxDB ();
+testreadDataFromInfluxDB();
 /***************************************
  *  MySQL Database Connection
  * ************************************/
 const dbQueryPromise = require("../db/dbConnect"); // Import dbconnect.js
-const { text } = require("express");
 
+const moment = require("moment");
 /***************************************
  *  Sensor Route Handler to store
  * sensor Data from Garden Gardian Device
@@ -59,25 +44,55 @@ async function storeSensorData(req, res) {
     console.log("DeviceID:", DeviceID);
 
     reading.SensorReadings.forEach((sensor) => {
-      const sensorName = sensor.Name;
+      const reading = sensor.Name;
+      const sensorName = sensor.Sensor;
+      const sensorType = sensor.Type;
+      const dataField = sensor.Field;
       const sensorValue = sensor.Value;
       const readTime = sensor.Time;
+      const location = sensor.Location;
 
       //Log the data to the console
+      console.log("=======================================");
+      console.log("Sensor", reading);
       console.log("Sensor Name:", sensorName);
+      console.log("Sensor Type:", sensorType);
       console.log("Sensor Value:", sensorValue);
       console.log("Reading Time:", readTime);
+      console.log("Location:", location);
       console.log("=======================================");
-    });
-  });
 
-  try {
-    // Database operation here
-    res.status(201).json({ message: "Sensor data stored successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Data storage failed" });
-  }
+      // // Convert the UTC timestamp to local time
+      // const localTime = moment.utc(readTime).local();
+
+      // // Convert the local time to a Unix timestamp (seconds since epoch)
+      // const timestamp = localTime.valueOf() / 1000;
+
+      try {
+        //Store the data in the InfluxDB
+        const point = new Point(reading)
+          .tag("sensor", sensorName)
+          .tag("sensorType", sensorType)
+          .tag("location", location)
+          .tag("deviceName", DeviceID)
+          .floatField(dataField, sensorValue)
+
+          .timestamp(readTime);
+
+        writeDataToInfluxDB(point).then((result) => {
+          if (result) {
+            console.log("Data Stored in InfluxDB");
+          } else {
+            console.log("Failed to store data in InfluxDB");
+          }
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    });
+  }); //End of Loop
+
+  res.status(201).json({ message: "Sensor Data Stored" });
 }
 
 async function sendDataToClient(req, res) {

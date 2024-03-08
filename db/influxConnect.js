@@ -27,14 +27,15 @@ const writeApi = InfluxClient.getWriteApi(org, bucket, "s");
 function writeDataToInfluxDB(point) {
   writeApi.writePoint(point);
 
-  writeApi
-    .close()
+ return writeApi
+    .flush()
     .then(() => {
-      console.log("Write complete");
+        //if successful
+      return true;
     })
     .catch((e) => {
       console.error(e);
-      console.log("\\nFinished ERROR");
+        return false;
     });
 }
 
@@ -48,8 +49,8 @@ function readDataFromInfluxDB(query) {
   return new Promise((resolve, reject) => {
     queryAPI.queryRows(query, {
       next(row, tableMeta) {
-        const o = tableMeta.toObject(row);
-        data.push(o);
+        const results = tableMeta.toObject(row);
+        data.push(results);
       },
       error(error) {
         reject(error);
