@@ -5,8 +5,9 @@ const sensorController = require('../controllers/sensorController');
 // Define sensor data routes
 router.post('/sendData', sensorController.storeSensorData);
 
+
 // Define a GET route to retrieve sensor data
-router.get('/retrieve', sensorController.sendDataToClient);
+router.get('/readSensor/latest', sensorController.sendLatestReading);
 
 // Define a GET route to test connection and perform setup tasks
 router.get('/testconnection', sensorController.testconnection);

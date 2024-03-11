@@ -10,24 +10,15 @@ const {
 } = require("../db/influxConnect");
 const { Point } = require("@influxdata/influxdb-client");
 
-async function testreadDataFromInfluxDB() {
-  const query = `from(bucket: "sensorData") |> range(start: -30m) |> filter(fn: (r) => r._measurement == "DHT Sensor1")`;
-
-  const resultData = await readDataFromInfluxDB(query);
-  console.log(resultData);
-}
-testreadDataFromInfluxDB();
 /***************************************
  *  MySQL Database Connection
  * ************************************/
 const dbQueryPromise = require("../db/dbConnect"); // Import dbconnect.js
 
-const moment = require("moment");
 /***************************************
  *  Sensor Route Handler to store
  * sensor Data from Garden Gardian Device
  * ************************************/
-
 async function storeSensorData(req, res) {
   // Implement sensor data storage logic, e.g., write data to the database.
 
@@ -54,7 +45,7 @@ async function storeSensorData(req, res) {
 
       //Log the data to the console
       console.log("=======================================");
-      console.log("Sensor", reading);
+      console.log("Sensor: ", reading);
       console.log("Sensor Name:", sensorName);
       console.log("Sensor Type:", sensorType);
       console.log("Sensor Value:", sensorValue);
@@ -93,10 +84,6 @@ async function storeSensorData(req, res) {
   }); //End of Loop
 
   res.status(201).json({ message: "Sensor Data Stored" });
-}
-
-async function sendDataToClient(req, res) {
-  // Implement sensor data storage logic, e.g., write data to the database.
 }
 
 /***************************************
@@ -158,7 +145,9 @@ async function addDevice(deviceID) {
   return result;
 }
 
-//A Route Handler to check the status of the device
+/***************************************
+ * Route handler to get the device status
+ * ************************************/
 async function getDeviceStatus(req, res) {
   //get the device_id from the header
   const deviceID = req.headers.device_id;
@@ -204,7 +193,9 @@ async function getDeviceStatus(req, res) {
   }
 }
 
-//Route handler to recieve Pings from the device and update the latest ping timestamp
+/***************************************
+ * Route handler to update the device status
+ * ************************************/
 async function updateDevicePing(req, res) {
   try {
     const deviceID = req.query.deviceID;
@@ -232,10 +223,41 @@ async function updateDevicePing(req, res) {
   }
 }
 
+/***************************************
+ * Coming Soon
+ * ************************************/
+
+async function sendLatestReading(req, res) {
+  //Get the Parameters from the URL
+  const deviceID = req.query.device_id;
+  const measurement = req.query.measurement;
+
+  //Query the InfluxDB for the latest reading
+  const query = `from(bucket: "sensorData")
+    |> range(start: -1d)
+    |> filter(fn: (r) => r._measurement == "${measurement}" and r.deviceName == "${deviceID}")
+    |> last()`;
+
+  try {
+    //Read the data from the InfluxDB
+    const resultData = await readDataFromInfluxDB(query);
+    const sensorValue = parseFloat(resultData[0]._value.toFixed(2));
+
+    console.log("Latest Sensor Reading: ", sensorValue);
+
+    res.status(200).json({ value: sensorValue });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "There was an error communication with the server" });
+  }
+}
+
 // Export the functions
 module.exports = {
   storeSensorData,
-  sendDataToClient,
+  sendLatestReading,
   testconnection,
   checkdeviceID,
   getDeviceStatus,
