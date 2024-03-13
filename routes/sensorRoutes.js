@@ -3,13 +3,14 @@ const router = express.Router();
 const sensorController = require('../controllers/sensorController');
 const sensorDBFunctions = require('../controllers/sensorDBFunctions');
 
-// Define sensor data routes
+// Routes to send Data from the GG device to the API/Databases
 router.post('/sendData', sensorController.storeSensorData);
 
 
-// Define routes to retrieve sensor data
+// Routes to retrieve sensor data from the InfuxDB
 router.get('/readSensor/latest', sensorDBFunctions.getLastReading);
-router.get('/readSensor/all', sensorDBFunctions.getLastReadingAll);
+router.get('/readSensor/latestAll', sensorDBFunctions.getLastReadingAll);
+router.get('/readSensor', sensorDBFunctions.getSensorReading);
 
 // Define a GET route to test connection and perform setup tasks
 router.get('/testconnection', sensorController.testconnection);

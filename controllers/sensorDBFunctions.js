@@ -53,8 +53,6 @@ const getLastReadingAll = async () => {
       sensorData[sensor._measurement] = parseFloat(sensor._value.toFixed(2));
     });
 
-    console.log("Latest Sensor Reading: ", sensorData);
-
     res.status(200).json(sensorData);
   } catch (error) {
     console.error(error);
@@ -64,6 +62,40 @@ const getLastReadingAll = async () => {
   }
 };
 
+async function getSensorReading() {
+  //Get the Parameters from the URL
+  const deviceID = req.query.device_id;
+  const measurement = req.query.measurement;
+  const duration = req.query.duration;
+
+  //Query the InfluxDB for all reading matching the parameters
+  const query = `from(bucket: "sensorData")
+    |> range(start: -${duration})
+    |> filter(fn: (r) => r._measurement == "${measurement}" and r.deviceName == "${deviceID}")
+    `;
+
+  try {
+    //Read the data from the InfluxDB
+    const resultData = await readDataFromInfluxDB(query);
+    const sensorData = [];
+
+    // For each sensor, get the latest reading and create an object to store them
+    resultData.map((sensor) => {
+      sensorData.push({
+        name: sensor._measurement,
+        time: sensor._time,
+        value: parseFloat(sensor._value.toFixed(2)),
+      });
+    });
+
+    res.status(200).json(sensorData);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "There was an error communication with the server" });
+  }
+}
 
 /***************************************
  * Function to query the InfluxDB for a specific sensor
@@ -72,4 +104,5 @@ const getLastReadingAll = async () => {
 module.exports = {
   getLastReading,
   getLastReadingAll,
+  getSensorReading,
 };
