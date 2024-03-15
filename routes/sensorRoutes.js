@@ -9,7 +9,7 @@ router.post('/sendData', sensorController.storeSensorData);
 
 // Routes to retrieve sensor data from the InfuxDB
 router.get('/readSensor/latest', sensorDBFunctions.getLastReading);
-router.get('/readSensor/latestAll', sensorDBFunctions.getLastReadingAll);
+router.get('/readSensor/latest/all', sensorDBFunctions.getLastReadingAll);
 router.get('/readSensor', sensorDBFunctions.getSensorReading);
 
 // Define a GET route to test connection and perform setup tasks

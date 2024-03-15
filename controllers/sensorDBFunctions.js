@@ -1,7 +1,8 @@
 const { readDataFromInfluxDB } = require("../db/influxConnect");
 
 /***************************************
- * Function to Get the latest sensor reading for a specific sensor
+ * Function to Get the latest sensor reading 
+ * - for a specific sensor
  * ************************************/
 
 async function getLastReading(req, res) {
@@ -11,7 +12,7 @@ async function getLastReading(req, res) {
 
   //Query the InfluxDB for the latest reading
   const query = `from(bucket: "sensorData")
-      |> range(start: -1d)
+      |> range(start: -100y)
       |> filter(fn: (r) => r._measurement == "${measurement}" and r.deviceName == "${deviceID}")
       |> last()`;
 
@@ -30,15 +31,16 @@ async function getLastReading(req, res) {
 }
 
 /***************************************
- * Function to read the latest sensor reading for all sensors for a specific device
+ * Function to read the latest sensor reading
+ *  - All sensors for a specific device
  * ************************************/
-const getLastReadingAll = async () => {
+const getLastReadingAll = async (req, res) => {
   //Get the Parameters from the URL
   const deviceID = req.query.device_id;
 
   //Query the InfluxDB for the latest reading
   const query = `from(bucket: "sensorData")
-      |> range(start: -1d)
+      |> range(start: -100y)
       |> filter(fn: (r) => r.deviceName == "${deviceID}")
       |> group(columns: ["_measurement"])
       |> last()`;
@@ -46,7 +48,7 @@ const getLastReadingAll = async () => {
   try {
     //Read the data from the InfluxDB
     const resultData = await readDataFromInfluxDB(query);
-
+    
     // For each sensor, get the latest reading and create an object to store them
     const sensorData = {};
     resultData.forEach((sensor) => {
@@ -62,6 +64,11 @@ const getLastReadingAll = async () => {
   }
 };
 
+
+/***************************************
+ * Function to query the InfluxDB for a specific sensor
+ * ************************************/
+ 
 async function getSensorReading() {
   //Get the Parameters from the URL
   const deviceID = req.query.device_id;
@@ -97,9 +104,7 @@ async function getSensorReading() {
   }
 }
 
-/***************************************
- * Function to query the InfluxDB for a specific sensor
- * ************************************/
+
 
 module.exports = {
   getLastReading,
