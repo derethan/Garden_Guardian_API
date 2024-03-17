@@ -4,6 +4,8 @@
 
 const jwt = require("jsonwebtoken");
 
+const sensorController = require("./sensorController");
+
 const messages = {
   emailExists:
     "A user has already registered with this email address, Please enter another email address to continue.",
@@ -177,8 +179,7 @@ async function login(req, res) {
  *  Protected Route handler
  **************************************/
 async function protectedRoute(req, res) {
-    //Handle protected route functions here, decode token and determine authorization based on token data
-
+  //Handle protected route functions here, decode token and determine authorization based on token data
 
   //Send the New Token to the client
   return res
@@ -229,7 +230,9 @@ function verifyToken(req, res, next) {
         );
         token = newToken; // Update the token with the new token
 
-        console.log("Token Expired for user" + tokenData.email + " New Token Generated");
+        console.log(
+          "Token Expired for user" + tokenData.email + " New Token Generated"
+        );
       } else {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -272,7 +275,67 @@ async function addDevice(req, res) {
       user_id
   );
 
-  // Attempt to register the device in the database
+  // Check if the device exists in the database
+  const deviceExists = await sensorController.checkdeviceID(device_id);
+  console.log("Device Exists: " + deviceExists);
+
+  // If the device does not exist, return an error
+  if (!deviceExists) {
+    return res
+      .status(409)
+      .json({
+        message: "No Device has been registered with the ID: " + device_id,
+      });
+  }
+
+  // Associate the device with the user in the user_device table
+  const sql = "INSERT INTO user_device (user_id, device_id) VALUES (?, ?)";
+  const VALUES = [user_id, device_id];
+
+  try {
+    await dbQueryPromise(sql, VALUES);
+    res
+      .status(201)
+      .json({ message: "Device has been registered successfully" });
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    res.status(500).json({ message: messages.dbconnectError });
+  }
+}
+
+/***************************************
+ *  Check if the user has a device associated
+ * with their account in the user_device table
+ * ************************************/
+
+async function checkForDevice(req, res) {
+  //extract the headers
+  const tokenHeader = req.headers.authorization;
+  const token = tokenHeader.split(" ")[1];
+
+  // extract the user email as user_id from the token
+  const decoded = jwt.decode(token);
+  const user_id = decoded.email;
+  const db_ID = decoded.id;
+
+  // Check if the user has a device associated with their account
+  const sql = "SELECT * FROM user_device WHERE user_id = ?";
+  const VALUES = [user_id];
+
+  const result = await dbQueryPromise(sql, VALUES);
+
+  if (result.length > 0) {
+    return res.status(200).json({
+      message: "User has a device associated with their account",
+      status: true,
+      device_id: result[0].device_id,
+    });
+  } else {
+    return res.status(409).json({
+      message: "User does not have a device associated with their account",
+      status: false,
+    });
+  }
 }
 
 /***************************************
@@ -284,4 +347,5 @@ module.exports = {
   protectedRoute,
   verifyToken,
   addDevice,
+  checkForDevice,
 };

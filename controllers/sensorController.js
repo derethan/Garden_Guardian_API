@@ -2,58 +2,18 @@
  *  Influx Database Connection
  *  - Used for storing sensor data and other time-series data
  * ************************************/
-//const influx = require('../influx'); // Use the appropriate library for your database
+
+//import the InfluxConnection
+const {
+  writeDataToInfluxDB,
+  readDataFromInfluxDB,
+} = require("../db/influxConnect");
+const { Point } = require("@influxdata/influxdb-client");
 
 /***************************************
  *  MySQL Database Connection
  * ************************************/
 const dbQueryPromise = require("../db/dbConnect"); // Import dbconnect.js
-
-/***************************************
- *  Sensor Route Handler to store
- * sensor Data from Garden Gardian Device
- * ************************************/
-
-async function storeSensorData(req, res) {
-  // Implement sensor data storage logic, e.g., write data to the database.
-
-  //Store data from post request
-  const responseData = req.body;
-
-  //Loop through the data and destructure it for Database Storage
-  responseData.Data.forEach((reading) => {
-    const DeviceID = reading.Device.DeviceID;
-
-    //Log the data to the console
-    console.log(" ");
-    console.log("New Sensor Reading:");
-    console.log("DeviceID:", DeviceID);
-
-    reading.SensorReadings.forEach((sensor) => {
-      const sensorName = sensor.Name;
-      const sensorValue = sensor.Value;
-      const readTime = sensor.Time;
-
-      //Log the data to the console
-      console.log("Sensor Name:", sensorName);
-      console.log("Sensor Value:", sensorValue);
-      console.log("Reading Time:", readTime);
-      console.log("=======================================");
-    });
-  });
-
-  try {
-    // Database operation here
-    res.status(201).json({ message: "Sensor data stored successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Data storage failed" });
-  }
-}
-
-async function sendDataToClient(req, res) {
-  // Implement sensor data storage logic, e.g., write data to the database.
-}
 
 /***************************************
  *  Test Connection between Route handler
@@ -89,6 +49,80 @@ async function testconnection(req, res) {
 }
 
 /***************************************
+ *  Sensor Route Handler to store
+ * sensor Data from Garden Gardian Device
+ * ************************************/
+async function storeSensorData(req, res) {
+  // Implement sensor data storage logic, e.g., write data to the database.
+
+  //Store data from post request
+  const responseData = req.body;
+
+  //Loop through the data and destructure it for Database Storage
+  responseData.Data.forEach((reading) => {
+    const DeviceID = reading.Device.DeviceID;
+
+    //Log the data to the console
+    console.log(" ");
+    console.log("New Sensor Reading:");
+    console.log("DeviceID:", DeviceID);
+
+    reading.SensorReadings.forEach((sensor) => {
+      const reading = sensor.Name;
+      const sensorName = sensor.Sensor;
+      const sensorType = sensor.Type;
+      const dataField = sensor.Field;
+      const sensorValue = sensor.Value;
+      const readTime = sensor.Time;
+      const location = sensor.Location;
+
+      //Log the data to the console
+      console.log("=======================================");
+      console.log("Sensor: ", reading);
+      console.log("Sensor Name:", sensorName);
+      console.log("Sensor Type:", sensorType);
+      console.log("Sensor Value:", sensorValue);
+      console.log("Reading Time:", readTime);
+      console.log("Location:", location);
+      console.log("=======================================");
+
+      // // Convert the UTC timestamp to local time
+      // const localTime = moment.utc(readTime).local();
+
+      // // Convert the local time to a Unix timestamp (seconds since epoch)
+      // const timestamp = localTime.valueOf() / 1000;
+
+      try {
+        //Store the data in the InfluxDB
+        const point = new Point(reading)
+          .tag("sensor", sensorName)
+          .tag("sensorType", sensorType)
+          .tag("location", location)
+          .tag("deviceName", DeviceID)
+          .floatField(dataField, sensorValue)
+
+          .timestamp(readTime);
+
+        writeDataToInfluxDB(point).then((result) => {
+          if (!result) {
+            console.log("Failed to store the " +  {reading} + " in the database");
+          }
+        });
+      } catch (error) {
+        console.error(error);
+        res
+          .status(500)
+          .json({ message: "There was an error communication with the server" });
+      }
+    });
+  }); //End of Loop
+
+  console.log("Sensor Data Stored");
+  res.status(201).json({ message: "Sensor Data Stored" });
+}
+
+
+/***************************************
  * Function to Add and verify The devices in the database
  * ************************************/
 
@@ -114,9 +148,92 @@ async function addDevice(deviceID) {
   return result;
 }
 
+/***************************************
+ * Route handler to update the device status
+ * ************************************/
+async function updateDevicePing(req, res) {
+  try {
+    const deviceID = req.query.deviceID;
+    console.log("Ping Recieved From ", deviceID);
+
+    // Update the latest ping timestamp
+    const sql =
+      "UPDATE devices SET last_ping = CURRENT_TIMESTAMP WHERE device_id = ?";
+    const VALUES = [deviceID];
+
+    const result = await dbQueryPromise(sql, VALUES);
+
+    if (!result) {
+      console.log("Failed to update the last ping timestamp");
+    }
+
+    res
+      .status(201)
+      .json({ message: "Ping Recieved and Device Status Updated" });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "There was an error communication with the server" });
+  }
+}
+
+/***************************************
+ * Route handler to get the device status
+ * ************************************/
+async function getDeviceStatus(req, res) {
+  //get the device_id from the header
+  const deviceID = req.headers.device_id;
+
+  try {
+    //check the latest ping timestamp in the devices table for the device
+    const sql = "SELECT last_ping FROM devices WHERE device_id = ?";
+    const VALUES = [deviceID];
+
+    const result = await dbQueryPromise(sql, VALUES);
+
+    //if the device is not found
+    if (result.length === 0) {
+      res.status(404).json({ message: "Device Not Found" });
+    }
+
+    //Get the Last Ping Timestamp
+    const lastPing = result[0].last_ping;
+
+    //Get the current time
+    const currentTime = new Date();
+
+    //Calculate the time difference
+    const timeDifference = currentTime - lastPing;
+
+    //If the time difference is greater than 1 minutes
+    if (timeDifference > 60000) {
+      res.status(201).json({
+        message: "Device is Offline",
+        status: "Offline",
+      });
+    } else {
+      res.status(201).json({
+        message: "Device is Online",
+        status: "online",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "There was an error communication with the Database" });
+  }
+}
+
+
+
+
 // Export the functions
 module.exports = {
-  storeSensorData,
-  sendDataToClient,
   testconnection,
+  storeSensorData,
+  checkdeviceID,
+  getDeviceStatus,
+  updateDevicePing,
 };
