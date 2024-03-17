@@ -104,18 +104,20 @@ async function storeSensorData(req, res) {
           .timestamp(readTime);
 
         writeDataToInfluxDB(point).then((result) => {
-          if (result) {
-            console.log("Data Stored in InfluxDB");
-          } else {
-            console.log("Failed to store data in InfluxDB");
+          if (!result) {
+            console.log("Failed to store the " +  {reading} + " in the database");
           }
         });
       } catch (error) {
         console.error(error);
+        res
+          .status(500)
+          .json({ message: "There was an error communication with the server" });
       }
     });
   }); //End of Loop
 
+  console.log("Sensor Data Stored");
   res.status(201).json({ message: "Sensor Data Stored" });
 }
 
