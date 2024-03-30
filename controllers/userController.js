@@ -281,11 +281,9 @@ async function addDevice(req, res) {
 
   // If the device does not exist, return an error
   if (!deviceExists) {
-    return res
-      .status(409)
-      .json({
-        message: "No Device has been registered with the ID: " + device_id,
-      });
+    return res.status(409).json({
+      message: "No Device has been registered with the ID: " + device_id,
+    });
   }
 
   // Associate the device with the user in the user_device table
@@ -322,19 +320,34 @@ async function checkForDevice(req, res) {
   const sql = "SELECT * FROM user_device WHERE user_id = ?";
   const VALUES = [user_id];
 
-  const result = await dbQueryPromise(sql, VALUES);
+  try {
+    const result = await dbQueryPromise(sql, VALUES);
+    
+    if (result.length > 0) {
 
-  if (result.length > 0) {
-    return res.status(200).json({
-      message: "User has a device associated with their account",
-      status: true,
-      device_id: result[0].device_id,
-    });
-  } else {
-    return res.status(409).json({
-      message: "User does not have a device associated with their account",
-      status: false,
-    });
+      // Store the Device ID's associated with the account
+      const deviceIDs = [];
+      result.forEach((device) => {
+        deviceIDs.push(device.device_id);
+      });
+
+      console.log (deviceIDs);
+
+
+      return res.status(200).json({
+        message: "User has a device associated with their account",
+        status: true,
+        device_id: deviceIDs,
+      });
+    } else {
+      return res.status(200).json({
+        message: "User does not have a device associated with their account",
+        status: false,
+      });
+    }
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    return res.status(500).json({ message: messages.dbconnectError });
   }
 }
 
