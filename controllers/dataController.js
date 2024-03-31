@@ -6,10 +6,16 @@ const getAllFruit = async (req, res) => {
     const response = await axios.get(
       "https://www.fruityvice.com/api/fruit/all"
     );
-    res.send(response);
+
+    res.status(200).json(response.data);
   } catch (error) {
     console.error(error);
-    res.status(500).send("Failed to fetch data from the Fruityvice API");
+    res
+      .status(500)
+      .json({
+        error:
+          "Server Connection Error: Failed to fetch data from the Fruityvice API",
+      });
   }
 };
 
@@ -20,10 +26,21 @@ const getFruitByName = async (req, res) => {
     const response = await axios.get(
       `https://www.fruityvice.com/api/fruit/${fruitName}`
     );
-    res.send(response);
+
+    res.status(200).json(response.data);
   } catch (error) {
-    console.error(error);
-    res.status(500).send("Failed to fetch data from the Fruityvice API");
+    if (error.response && error.response.status === 404) {
+      res
+        .status(404)
+        .json({
+          error: `Fruit not found: ${fruitName}, Please enter a valid fruit name in the URL. Example: /fruit/apple"`,
+        });
+    } else {
+      res.status(500).json({
+        error:
+          "Server Connection Error: Failed to fetch data from the Fruityvice API",
+      });
+    }
   }
 };
 
