@@ -3,6 +3,9 @@
 const express = require('express');
 const app = express();
 
+// Configure dotenv
+const dotenv = require('dotenv');
+dotenv.config({ path: './.env' });
 
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
@@ -29,9 +32,7 @@ app.use('/sensors', sensorRoutes);
 app.use('/api', dataRoutes);
 
 
-// Configure dotenv
-const dotenv = require('dotenv');
-dotenv.config({ path: './.env' });
+
 
 // Start the server
 const port = 3000;
