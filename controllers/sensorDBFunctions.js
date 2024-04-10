@@ -1,7 +1,7 @@
 const { readDataFromInfluxDB } = require("../db/influxConnect");
 
 /***************************************
- * Function to Get the latest sensor reading 
+ * Function to Read the latest sensor reading
  * - for a specific sensor
  * ************************************/
 
@@ -48,7 +48,7 @@ const getLastReadingAll = async (req, res) => {
   try {
     //Read the data from the InfluxDB
     const resultData = await readDataFromInfluxDB(query);
-    
+
     // For each sensor, get the latest reading and create an object to store them
     const sensorData = {};
     resultData.forEach((sensor) => {
@@ -64,21 +64,22 @@ const getLastReadingAll = async (req, res) => {
   }
 };
 
-
 /***************************************
  * Function to query the InfluxDB for a specific sensor
  * ************************************/
- 
-async function getSensorReading() {
+
+async function getSensorReading(req, res) {
   //Get the Parameters from the URL
   const deviceID = req.query.device_id;
   const measurement = req.query.measurement;
   const duration = req.query.duration;
+  const frequency = req.query.frequency;
 
   //Query the InfluxDB for all reading matching the parameters
   const query = `from(bucket: "sensorData")
     |> range(start: -${duration})
     |> filter(fn: (r) => r._measurement == "${measurement}" and r.deviceName == "${deviceID}")
+    |> aggregateWindow(every: ${frequency}, fn: mean)
     `;
 
   try {
@@ -88,11 +89,13 @@ async function getSensorReading() {
 
     // For each sensor, get the latest reading and create an object to store them
     resultData.map((sensor) => {
-      sensorData.push({
-        name: sensor._measurement,
-        time: sensor._time,
-        value: parseFloat(sensor._value.toFixed(2)),
-      });
+      if (sensor._value) {
+        sensorData.push({
+          name: sensor._measurement,
+          time: sensor._time,
+          value: parseFloat(sensor._value.toFixed(2)),
+        });
+      }
     });
 
     res.status(200).json(sensorData);
@@ -103,8 +106,6 @@ async function getSensorReading() {
       .json({ message: "There was an error communication with the server" });
   }
 }
-
-
 
 module.exports = {
   getLastReading,

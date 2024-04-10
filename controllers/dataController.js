@@ -81,7 +81,9 @@ const getEdiblePlants = async (req, res) => {
 };
 
 const getPlantsByName = async (req, res) => {
-  const plantName = req.params.plantName;
+
+  const plantName = req.params.name;
+  
   const enpoint = `https://trefle.io/api/v1/plants/${plantName}?token=` + apiKey;
 
   try {
