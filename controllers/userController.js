@@ -331,7 +331,7 @@ async function checkForDevice(req, res) {
         deviceIDs.push(device.device_id);
       });
 
-      console.log (deviceIDs);
+      // console.log (deviceIDs); // - To log Device ID from frontend user check
 
 
       return res.status(200).json({
