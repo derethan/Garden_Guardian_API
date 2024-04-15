@@ -86,12 +86,26 @@ async function storeSensorData(req, res) {
       // console.log("Location:", location);
       // console.log("=======================================");
 
+      /**
+       * 
+       *  TODO: NEED TO REWORK DATE HANDLING TO ACCOUNT FOR LACK OF TIME SERVER ON DEVICE
+       *  DEVICE WILL BE SET TO RETURN A NULL OR PLACEHOLDER VALUE
+       * WHEN A REQUEST IS NULL, NEED TO CRREATE A CURRENT TIMESTAMP SERVERSIDE 
+       * TO MATCH THE UTC FORMAT FOR INFLUX
+       * 
+       * 
+       */
+
+
+
+      //Get the current time
+      const currentTime = new Date();
       // // Convert the UTC timestamp to local time
       // const localTime = moment.utc(readTime).local();
 
       // // Convert the local time to a Unix timestamp (seconds since epoch)
       // const timestamp = localTime.valueOf() / 1000;
-
+      //Get the current time
       try {
         //Store the data in the InfluxDB
         const point = new Point(reading)
@@ -100,19 +114,20 @@ async function storeSensorData(req, res) {
           .tag("location", location)
           .tag("deviceName", DeviceID)
           .floatField(dataField, sensorValue)
-
-          .timestamp(readTime);
+          .timestamp(readTime > 1000000 ? readTime : currentTime);
 
         writeDataToInfluxDB(point).then((result) => {
           if (!result) {
-            console.log("Failed to store the " +  {reading} + " in the database");
+            console.log(
+              "Failed to store the " + { reading } + " in the database"
+            );
           }
         });
       } catch (error) {
         console.error(error);
-        res
-          .status(500)
-          .json({ message: "There was an error communication with the server" });
+        res.status(500).json({
+          message: "There was an error communication with the Influx server",
+        });
       }
     });
   }); //End of Loop
@@ -120,7 +135,6 @@ async function storeSensorData(req, res) {
   console.log("Sensor Data Stored");
   res.status(201).json({ message: "Sensor Data Stored" });
 }
-
 
 /***************************************
  * Function to Add and verify The devices in the database
@@ -207,7 +221,7 @@ async function getDeviceStatus(req, res) {
     const timeDifference = currentTime - lastPing;
 
     //If the time difference is greater than 1 minutes
-    if (timeDifference > 60000) {
+    if (timeDifference > 90000) {
       res.status(201).json({
         message: "Device is Offline",
         status: "Offline",
@@ -225,9 +239,6 @@ async function getDeviceStatus(req, res) {
       .json({ message: "There was an error communication with the Database" });
   }
 }
-
-
-
 
 // Export the functions
 module.exports = {

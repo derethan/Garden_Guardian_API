@@ -42,6 +42,8 @@ const getFruitByName = async (req, res) => {
   }
 };
 
+
+
 const getAllPlants = async (req, res) => {
   const enpoint = "https://trefle.io/api/v1/plants?token=" + apiKey;
 
@@ -78,9 +80,29 @@ const getEdiblePlants = async (req, res) => {
   }
 };
 
+const getPlantsByName = async (req, res) => {
+
+  const plantName = req.params.name;
+  
+  const enpoint = `https://trefle.io/api/v1/plants/${plantName}?token=` + apiKey;
+
+  try {
+    const response = await axios.get(enpoint);
+
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error:
+        "Server Connection Error: Failed to fetch data from the Trefle API",
+    });
+  }
+};
+
 module.exports = {
   getAllFruit,
   getFruitByName,
   getAllPlants,
   getEdiblePlants,
+  getPlantsByName,
 };
