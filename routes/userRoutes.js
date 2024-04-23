@@ -5,6 +5,7 @@ const userController = require('../controllers/userController');
 //Define user related routes
 router.post('/register', userController.register);
 router.post('/login', userController.login);
+router.post('/changePassword', userController.changePassword);
 
 router.post('/addDevice', userController.addDevice);
 router.get ('/checkForDevice', userController.checkForDevice);
