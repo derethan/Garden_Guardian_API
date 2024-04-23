@@ -18,13 +18,14 @@ const messages = {
 /***************************************
  *  MySQL Database Connection
  * ************************************/
-const dbQueryPromise = require("../db/dbConnect"); // Import dbconnect.js
+const dbQueryPromise = require("../db/dbConnect");
 
 /***************************************
  *  Password Hashing and Verification
  * ************************************/
 const crypto = require("crypto");
 
+// Hash the supplied password
 const hashPassword = (password) => {
   let salt = crypto.randomBytes(16).toString("hex");
   let iterations = 10000;
@@ -35,9 +36,7 @@ const hashPassword = (password) => {
   return [salt, hash].join("$");
 };
 
-/***************************************
- *  Data Verification Functions
- * ************************************/
+// Function to Verify a Supplied Password with a Stored Password from the User database
 const verifyPassword = (password, storedPassword) => {
   const [salt, originalHash] = storedPassword.split("$"); // Split the stored password into salt and hash
   const iterations = 10000;
@@ -47,6 +46,12 @@ const verifyPassword = (password, storedPassword) => {
 
   return originalHash === verifyHash; // If the hashes match, return true, else return false
 };
+
+
+
+/***************************************
+ *  User Verification Functions
+ * ************************************/
 
 // Check if email already exists
 async function emailExists(email) {
@@ -74,9 +79,13 @@ async function updateTimestamp(email) {
   return dbQueryPromise(sql, VALUES);
 }
 
+
+
 /***************************************
- *  User Registration Route
+ *  User Account Routes
  **************************************/
+
+// Route for registering a new user
 async function register(req, res) {
   // Extract the request data
   const { firstName, lastName, email, password } = req.body;
@@ -107,10 +116,7 @@ async function register(req, res) {
   }
 }
 
-/***************************************
- *  User Login Route
- **************************************/
-
+// Route for logging in a user
 async function login(req, res) {
   const { email, password } = req.body;
 
@@ -174,6 +180,150 @@ async function login(req, res) {
     res.status(500).json({ message: "Login failed" });
   }
 }
+
+// Route for Changing the user password
+async function changePassword(req, res) {
+  const {password, newPassword} = req.body;
+  const tokenHeader = req.headers.authorization;
+  const token = tokenHeader.split(" ")[1];
+
+  //Decode Token to get the user information
+  const decoded = jwt.decode(token);
+  const user_id = decoded.id;
+
+  // Get the user from the database
+  const user = await getUser(decoded.email);
+  const storedPassword = user[0].password;
+
+  // Verify the old password with the stored password
+  const passwordIsValid = verifyPassword(password, storedPassword);
+  if (!passwordIsValid) {
+    return res.status(401).json({ message: "Invalid Password, enter your current Password and try again." });
+  }
+
+  // Hash the new password
+  const newHashedPassword = hashPassword(newPassword);
+
+  // Update the password in the database
+  const sql = "UPDATE users SET password = ? WHERE id = ?";
+  const VALUES = [newHashedPassword, user_id];
+
+  try {
+    await dbQueryPromise(sql, VALUES);
+    console.log("Password has been changed successfully for user: " + decoded.email + " at: " + new Date());
+    res.status(200).json({ message: "Password has been changed successfully"});
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    res.status(500).json({ message: messages.dbconnectError });
+  }
+  
+}
+
+
+
+
+/***************************************
+ *  Device Routes - Account Based
+ **************************************/
+
+// Route for Adding a new device to the user account
+async function addDevice(req, res) {
+  //extract the headers
+  const tokenHeader = req.headers.authorization;
+  const token = tokenHeader.split(" ")[1];
+
+  // extract the user email as user_id from the token
+  const decoded = jwt.decode(token);
+  const user_id = decoded.email;
+  const db_ID = decoded.id;
+
+  // Extract the request data
+  const { device_id, device_name } = req.body;
+
+  //log
+  console.log(
+    "Device ID: " +
+      device_id +
+      " Device Name: " +
+      device_name +
+      " User ID: " +
+      user_id
+  );
+
+  // Check if the device exists in the database
+  const deviceExists = await sensorController.checkdeviceID(device_id);
+  console.log("Device Exists: " + deviceExists);
+
+  // If the device does not exist, return an error
+  if (!deviceExists) {
+    return res.status(409).json({
+      message: "No Device has been registered with the ID: " + device_id,
+    });
+  }
+
+  // Associate the device with the user in the user_device table
+  const sql = "INSERT INTO user_device (user_id, device_id) VALUES (?, ?)";
+  const VALUES = [user_id, device_id];
+
+  try {
+    await dbQueryPromise(sql, VALUES);
+    res
+      .status(201)
+      .json({ message: "Device has been registered successfully" });
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    res.status(500).json({ message: messages.dbconnectError });
+  }
+}
+
+// Route for checking if a user has a device associated with their account
+async function checkForDevice(req, res) {
+  //extract the headers
+  const tokenHeader = req.headers.authorization;
+  const token = tokenHeader.split(" ")[1];
+
+  // extract the user email as user_id from the token
+  const decoded = jwt.decode(token);
+  const user_id = decoded.email;
+  const db_ID = decoded.id;
+
+  // Check if the user has a device associated with their account
+  const sql = "SELECT * FROM user_device WHERE user_id = ?";
+  const VALUES = [user_id];
+
+  try {
+    const result = await dbQueryPromise(sql, VALUES);
+    
+    if (result.length > 0) {
+
+      // Store the Device ID's associated with the account
+      const deviceIDs = [];
+      result.forEach((device) => {
+        deviceIDs.push(device.device_id);
+      });
+
+      // console.log (deviceIDs); // - To log Device ID from frontend user check
+
+
+      return res.status(200).json({
+        message: "User has a device associated with their account",
+        status: true,
+        device_id: deviceIDs,
+      });
+    } else {
+      return res.status(200).json({
+        message: "User does not have a device associated with their account",
+        status: false,
+      });
+    }
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    return res.status(500).json({ message: messages.dbconnectError });
+  }
+}
+
+
+
 
 /***************************************
  *  Protected Route handler
@@ -247,109 +397,7 @@ function verifyToken(req, res, next) {
   }); // End of jwt.verify
 } // End of verifyToken
 
-/***************************************
- *  Device Routes
- **************************************/
 
-// Route for Adding a new device
-async function addDevice(req, res) {
-  //extract the headers
-  const tokenHeader = req.headers.authorization;
-  const token = tokenHeader.split(" ")[1];
-
-  // extract the user email as user_id from the token
-  const decoded = jwt.decode(token);
-  const user_id = decoded.email;
-  const db_ID = decoded.id;
-
-  // Extract the request data
-  const { device_id, device_name } = req.body;
-
-  //log
-  console.log(
-    "Device ID: " +
-      device_id +
-      " Device Name: " +
-      device_name +
-      " User ID: " +
-      user_id
-  );
-
-  // Check if the device exists in the database
-  const deviceExists = await sensorController.checkdeviceID(device_id);
-  console.log("Device Exists: " + deviceExists);
-
-  // If the device does not exist, return an error
-  if (!deviceExists) {
-    return res.status(409).json({
-      message: "No Device has been registered with the ID: " + device_id,
-    });
-  }
-
-  // Associate the device with the user in the user_device table
-  const sql = "INSERT INTO user_device (user_id, device_id) VALUES (?, ?)";
-  const VALUES = [user_id, device_id];
-
-  try {
-    await dbQueryPromise(sql, VALUES);
-    res
-      .status(201)
-      .json({ message: "Device has been registered successfully" });
-  } catch (error) {
-    console.error(messages.dbconnectError, error);
-    res.status(500).json({ message: messages.dbconnectError });
-  }
-}
-
-/***************************************
- *  Check if the user has a device associated
- * with their account in the user_device table
- * ************************************/
-
-async function checkForDevice(req, res) {
-  //extract the headers
-  const tokenHeader = req.headers.authorization;
-  const token = tokenHeader.split(" ")[1];
-
-  // extract the user email as user_id from the token
-  const decoded = jwt.decode(token);
-  const user_id = decoded.email;
-  const db_ID = decoded.id;
-
-  // Check if the user has a device associated with their account
-  const sql = "SELECT * FROM user_device WHERE user_id = ?";
-  const VALUES = [user_id];
-
-  try {
-    const result = await dbQueryPromise(sql, VALUES);
-    
-    if (result.length > 0) {
-
-      // Store the Device ID's associated with the account
-      const deviceIDs = [];
-      result.forEach((device) => {
-        deviceIDs.push(device.device_id);
-      });
-
-      // console.log (deviceIDs); // - To log Device ID from frontend user check
-
-
-      return res.status(200).json({
-        message: "User has a device associated with their account",
-        status: true,
-        device_id: deviceIDs,
-      });
-    } else {
-      return res.status(200).json({
-        message: "User does not have a device associated with their account",
-        status: false,
-      });
-    }
-  } catch (error) {
-    console.error(messages.dbconnectError, error);
-    return res.status(500).json({ message: messages.dbconnectError });
-  }
-}
 
 /***************************************
  *  Export the functions
@@ -361,4 +409,5 @@ module.exports = {
   verifyToken,
   addDevice,
   checkForDevice,
+  changePassword,
 };
