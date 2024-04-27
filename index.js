@@ -18,6 +18,7 @@ app.use(cors());
 const userRoutes = require('./routes/userRoutes');
 const sensorRoutes = require('./routes/sensorRoutes');
 const dataRoutes = require('./routes/dataRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 // Add headers
 app.use((req, res, next) => {
@@ -30,6 +31,7 @@ app.use(express.json());
 app.use('/users', userRoutes);
 app.use('/sensors', sensorRoutes);
 app.use('/api', dataRoutes);
+app.use('/ai', aiRoutes);
 
 
 
