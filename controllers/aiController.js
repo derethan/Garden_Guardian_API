@@ -8,8 +8,6 @@ const getPlantDescription = async (req, res) => {
   const url = process.env.AI_URL;
   const plant = req.params.plantName;
 
-  console.log(plant);
-
   const aiQuery = `Provide me description of ${plant} in 2 sentences or less.`;
   // const vagueness = vaguenessInput.value;
 
@@ -17,7 +15,7 @@ const getPlantDescription = async (req, res) => {
     {
       role: "system",
       content:
-        "Hello, I am a chatbot assistant. I can help you with any gardening problems you may have. Please describe your problem below.",
+        "Hello, I am a Gardening Expert. I can help you with any gardening problems you may have. Please describe your problem below.",
     },
     {
       role: "user",
