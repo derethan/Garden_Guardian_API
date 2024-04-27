@@ -47,8 +47,6 @@ const verifyPassword = (password, storedPassword) => {
   return originalHash === verifyHash; // If the hashes match, return true, else return false
 };
 
-
-
 /***************************************
  *  User Verification Functions
  * ************************************/
@@ -78,8 +76,6 @@ async function updateTimestamp(email) {
 
   return dbQueryPromise(sql, VALUES);
 }
-
-
 
 /***************************************
  *  User Account Routes
@@ -183,7 +179,7 @@ async function login(req, res) {
 
 // Route for Changing the user password
 async function changePassword(req, res) {
-  const {password, newPassword} = req.body;
+  const { password, newPassword } = req.body;
   const tokenHeader = req.headers.authorization;
   const token = tokenHeader.split(" ")[1];
 
@@ -198,7 +194,11 @@ async function changePassword(req, res) {
   // Verify the old password with the stored password
   const passwordIsValid = verifyPassword(password, storedPassword);
   if (!passwordIsValid) {
-    return res.status(401).json({ message: "Invalid Password, enter your current Password and try again." });
+    return res
+      .status(401)
+      .json({
+        message: "Invalid Password, enter your current Password and try again.",
+      });
   }
 
   // Hash the new password
@@ -210,17 +210,18 @@ async function changePassword(req, res) {
 
   try {
     await dbQueryPromise(sql, VALUES);
-    console.log("Password has been changed successfully for user: " + decoded.email + " at: " + new Date());
-    res.status(200).json({ message: "Password has been changed successfully"});
+    console.log(
+      "Password has been changed successfully for user: " +
+        decoded.email +
+        " at: " +
+        new Date()
+    );
+    res.status(200).json({ message: "Password has been changed successfully" });
   } catch (error) {
     console.error(messages.dbconnectError, error);
     res.status(500).json({ message: messages.dbconnectError });
   }
-  
 }
-
-
-
 
 /***************************************
  *  Device Routes - Account Based
@@ -234,8 +235,8 @@ async function addDevice(req, res) {
 
   // extract the user email as user_id from the token
   const decoded = jwt.decode(token);
-  const user_id = decoded.email;
-  const db_ID = decoded.id;
+  const user_id = decoded.id;
+  const user_email = decoded.email;
 
   // Extract the request data
   const { device_id, device_name } = req.body;
@@ -247,7 +248,9 @@ async function addDevice(req, res) {
       " Device Name: " +
       device_name +
       " User ID: " +
-      user_id
+      user_id +
+      " User Email: " +
+      user_email
   );
 
   // Check if the device exists in the database
@@ -262,8 +265,9 @@ async function addDevice(req, res) {
   }
 
   // Associate the device with the user in the user_device table
-  const sql = "INSERT INTO user_device (user_id, device_id) VALUES (?, ?)";
-  const VALUES = [user_id, device_id];
+  const sql =
+    "INSERT INTO user_device (user_id, device_id, device_name, user_emaul) VALUES (?, ?, ?, ?)";
+  const VALUES = [user_id, device_id, device_name, user_email];
 
   try {
     await dbQueryPromise(sql, VALUES);
@@ -293,17 +297,15 @@ async function checkForDevice(req, res) {
 
   try {
     const result = await dbQueryPromise(sql, VALUES);
-    
-    if (result.length > 0) {
 
+    if (result.length > 0) {
       // Store the Device ID's associated with the account
       const deviceIDs = [];
       result.forEach((device) => {
-        deviceIDs.push(device.device_id);
+        deviceIDs.push({device_id: device.device_id, device_name: device.device_name});
       });
 
       // console.log (deviceIDs); // - To log Device ID from frontend user check
-
 
       return res.status(200).json({
         message: "User has a device associated with their account",
@@ -321,9 +323,6 @@ async function checkForDevice(req, res) {
     return res.status(500).json({ message: messages.dbconnectError });
   }
 }
-
-
-
 
 /***************************************
  *  Protected Route handler
@@ -396,8 +395,6 @@ function verifyToken(req, res, next) {
     next(); // Continue to the next middleware
   }); // End of jwt.verify
 } // End of verifyToken
-
-
 
 /***************************************
  *  Export the functions
