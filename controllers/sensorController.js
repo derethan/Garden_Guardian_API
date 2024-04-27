@@ -49,94 +49,6 @@ async function testconnection(req, res) {
 }
 
 /***************************************
- *  Sensor Route Handler to store
- * sensor Data from Garden Gardian Device
- * ************************************/
-async function storeSensorData(req, res) {
-  // Implement sensor data storage logic, e.g., write data to the database.
-
-  //Store data from post request
-  const responseData = req.body;
-
-  //Loop through the data and destructure it for Database Storage
-  responseData.Data.forEach((reading) => {
-    const DeviceID = reading.Device.DeviceID;
-
-    //Log the data to the console
-    console.log(" ");
-    console.log("New Sensor Reading:");
-    console.log("DeviceID:", DeviceID);
-
-    reading.SensorReadings.forEach((sensor) => {
-      const reading = sensor.Name;
-      const sensorName = sensor.Sensor;
-      const sensorType = sensor.Type;
-      const dataField = sensor.Field;
-      const sensorValue = sensor.Value;
-      const readTime = sensor.Time;
-      const location = sensor.Location;
-
-      // Log the data to the console
-      console.log("=======================================");
-      console.log("Sensor: ", reading);
-      console.log("Sensor Name:", sensorName);
-      console.log("Sensor Type:", sensorType);
-      console.log("Sensor Value:", sensorValue);
-      console.log("Reading Time:", readTime);
-      console.log("Location:", location);
-      console.log("=======================================");
-
-      /**
-       * 
-       *  TODO: NEED TO REWORK DATE HANDLING TO ACCOUNT FOR LACK OF TIME SERVER ON DEVICE
-       *  DEVICE WILL BE SET TO RETURN A NULL OR PLACEHOLDER VALUE
-       * WHEN A REQUEST IS NULL, NEED TO CRREATE A CURRENT TIMESTAMP SERVERSIDE 
-       * TO MATCH THE UTC FORMAT FOR INFLUX
-       * 
-       * 
-       */
-
-
-
-      //Get the current time
-      const currentTime = new Date();
-      // // Convert the UTC timestamp to local time
-      // const localTime = moment.utc(readTime).local();
-
-      // // Convert the local time to a Unix timestamp (seconds since epoch)
-      // const timestamp = localTime.valueOf() / 1000;
-      //Get the current time
-      try {
-        //Store the data in the InfluxDB
-        const point = new Point(reading)
-          .tag("sensor", sensorName)
-          .tag("sensorType", sensorType)
-          .tag("location", location)
-          .tag("deviceName", DeviceID)
-          .floatField(dataField, sensorValue)
-          .timestamp(readTime > 1000000 ? readTime : currentTime);
-
-        writeDataToInfluxDB(point).then((result) => {
-          if (!result) {
-            console.log(
-              "Failed to store the " + { reading } + " in the database"
-            );
-          }
-        });
-      } catch (error) {
-        console.error(error);
-        res.status(500).json({
-          message: "There was an error communication with the Influx server",
-        });
-      }
-    });
-  }); //End of Loop
-
-  console.log("Sensor Data Stored");
-  res.status(201).json({ message: "Sensor Data Stored" });
-}
-
-/***************************************
  * Function to Add and verify The devices in the database
  * ************************************/
 
@@ -240,6 +152,142 @@ async function getDeviceStatus(req, res) {
   }
 }
 
+/***************************************
+ * Route handler to get the Sensor status
+ * ************************************/
+async function getSensorStatus(req, res) {
+  // Get the Header Data
+  const deviceID = req.headers.device_id;
+
+  //Query the InfluxDB for the latest reading
+  const query = `from(bucket: "sensorData")
+    |> range(start: -100y)
+    |> filter(fn: (r) => r.deviceName == "${deviceID}")
+    |> group(columns: ["_measurement"])
+    |> last()`;
+
+  try {
+    //Read the data from the InfluxDB
+    const resultData = await readDataFromInfluxDB(query);
+
+    // For each sensor, get the Measurement Name (Sensor Name) and the latest reading Timestamp
+    const sensorData = [];
+    resultData.forEach((sensor) => {
+      // Last time the Sensor was read
+      const lastReading = sensor._time;
+      let status = "Offline";
+
+      // If the last reading was more then 5 min ago, set the status to "Offline", otherwise set it to "Online"
+      const currentTime = new Date();
+      const timeDifference = currentTime - lastReading;
+      if (timeDifference > 300000) {
+        // 5 minutes
+        status = "Offline";
+      } else {
+        status = "Online";
+      }
+      
+      sensorData.push({
+        sensor: sensor._measurement,
+        sensorStatus: status,
+      });
+    });
+
+    res.status(200).json(sensorData);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "There was an error communication with the server" });
+  }
+}
+
+/***************************************
+ *  Sensor Route Handler to store
+ * sensor Data from Garden Gardian Device
+ * ************************************/
+async function storeSensorData(req, res) {
+  // Implement sensor data storage logic, e.g., write data to the database.
+
+  //Store data from post request
+  const responseData = req.body;
+
+  //Loop through the data and destructure it for Database Storage
+  responseData.Data.forEach((reading) => {
+    const DeviceID = reading.Device.DeviceID;
+
+    //Log the data to the console
+    console.log(" ");
+    console.log("New Sensor Reading:");
+    console.log("DeviceID:", DeviceID);
+
+    reading.SensorReadings.forEach((sensor) => {
+      const reading = sensor.Name;
+      const sensorName = sensor.Sensor;
+      const sensorType = sensor.Type;
+      const dataField = sensor.Field;
+      const sensorValue = sensor.Value;
+      const readTime = sensor.Time;
+      const location = sensor.Location;
+
+      // Log the data to the console
+      console.log("=======================================");
+      console.log("Sensor: ", reading);
+      console.log("Sensor Name:", sensorName);
+      console.log("Sensor Type:", sensorType);
+      console.log("Sensor Value:", sensorValue);
+      console.log("Reading Time:", readTime);
+      console.log("Location:", location);
+      console.log("=======================================");
+
+      /**
+       *
+       *  TODO: NEED TO REWORK DATE HANDLING TO ACCOUNT FOR LACK OF TIME SERVER ON DEVICE
+       *  DEVICE WILL BE SET TO RETURN A NULL OR PLACEHOLDER VALUE
+       * WHEN A REQUEST IS NULL, NEED TO CRREATE A CURRENT TIMESTAMP SERVERSIDE
+       * TO MATCH THE UTC FORMAT FOR INFLUX
+       *
+       *
+       */
+
+      //Get the current time
+      const currentTime = new Date();
+      // // Convert the UTC timestamp to local time
+      // const localTime = moment.utc(readTime).local();
+
+      // // Convert the local time to a Unix timestamp (seconds since epoch)
+      // const timestamp = localTime.valueOf() / 1000;
+      //Get the current time
+      try {
+        //Store the data in the InfluxDB
+        const point = new Point(reading)
+          .tag("sensor", sensorName)
+          .tag("sensorType", sensorType)
+          .tag("location", location)
+          .tag("deviceName", DeviceID)
+          .floatField(dataField, sensorValue)
+          .timestamp(readTime > 1000000 ? readTime : currentTime);
+
+        writeDataToInfluxDB(point).then((result) => {
+          if (!result) {
+            console.log(
+              "Failed to store the " + { reading } + " in the database"
+            );
+          }
+        });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({
+          message: "There was an error communication with the Influx server",
+        });
+      }
+    });
+  }); //End of Loop
+
+  console.log("Sensor Data Stored");
+  res.status(201).json({ message: "Sensor Data Stored" });
+}
+
 // Export the functions
 module.exports = {
   testconnection,
@@ -247,4 +295,5 @@ module.exports = {
   checkdeviceID,
   getDeviceStatus,
   updateDevicePing,
+  getSensorStatus,
 };
