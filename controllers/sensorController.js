@@ -232,14 +232,14 @@ async function storeSensorData(req, res) {
       const location = sensor.Location;
 
       // Log the data to the console
-      console.log("=======================================");
-      console.log("Sensor: ", reading);
-      console.log("Sensor Name:", sensorName);
-      console.log("Sensor Type:", sensorType);
-      console.log("Sensor Value:", sensorValue);
-      console.log("Reading Time:", readTime);
-      console.log("Location:", location);
-      console.log("=======================================");
+      // console.log("=======================================");
+      // console.log("Sensor: ", reading);
+      // console.log("Sensor Name:", sensorName);
+      // console.log("Sensor Type:", sensorType);
+      // console.log("Sensor Value:", sensorValue);
+      // console.log("Reading Time:", readTime);
+      // console.log("Location:", location);
+      // console.log("=======================================");
 
       /**
        *
