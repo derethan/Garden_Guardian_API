@@ -174,12 +174,13 @@ async function getSensorStatus(req, res) {
     const sensorData = [];
     resultData.forEach((sensor) => {
       // Last time the Sensor was read
-      const lastReading = sensor._time;
+      const lastReading = new Date(sensor._time);
       let status = "Offline";
 
       // If the last reading was more then 5 min ago, set the status to "Offline", otherwise set it to "Online"
       const currentTime = new Date();
       const timeDifference = currentTime - lastReading;
+
       if (timeDifference > 300000) {
         // 5 minutes
         status = "Offline";
@@ -231,14 +232,14 @@ async function storeSensorData(req, res) {
       const location = sensor.Location;
 
       // Log the data to the console
-      console.log("=======================================");
-      console.log("Sensor: ", reading);
-      console.log("Sensor Name:", sensorName);
-      console.log("Sensor Type:", sensorType);
-      console.log("Sensor Value:", sensorValue);
-      console.log("Reading Time:", readTime);
-      console.log("Location:", location);
-      console.log("=======================================");
+      // console.log("=======================================");
+      // console.log("Sensor: ", reading);
+      // console.log("Sensor Name:", sensorName);
+      // console.log("Sensor Type:", sensorType);
+      // console.log("Sensor Value:", sensorValue);
+      // console.log("Reading Time:", readTime);
+      // console.log("Location:", location);
+      // console.log("=======================================");
 
       /**
        *

@@ -7,3 +7,8 @@ Start Server.bat
 responceCodes.info
 package-lock.json
 package-lock.json
+sslcert/ggssl.key
+sslcert/ggssl.csr
+sslcert/gd_bundle-g2-g1.crt
+/sslcert
+nginx.conf

@@ -1,5 +1,10 @@
 // API To handle communication between the Node server and the Arduino
 
+const fs = require('fs');
+const http = require('http');
+const https = require('https');
+
+// Enable Express
 const express = require('express');
 const app = express();
 
@@ -7,6 +12,7 @@ const app = express();
 const dotenv = require('dotenv');
 dotenv.config({ path: './.env' });
 
+//Tell the App to use the body-parser middleware
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 
@@ -34,10 +40,34 @@ app.use('/api', dataRoutes);
 app.use('/ai', aiRoutes);
 
 
+// Your routes and middleware setup
+app.get('/', (req, res) => {
+  res.send('Hello, HTTPS World!');
+});
 
 
-// Start the server
-const port = 3000;
+// SSL options
+const sslOptions = {
+  key: fs.readFileSync('./sslcert/ggssl.key', 'utf8'),
+  cert: fs.readFileSync('./sslcert/63be74e1b51ba86b.crt', 'utf8'),
+  ca: fs.readFileSync('./sslcert/gd_bundle-g2-g1.crt', 'utf8')
+};
+
+
 const host = '0.0.0.0';
-app.listen(port, host);
-console.log(`Listening at http://${host}:${port}`);
+
+
+//Start the HTTPS server
+const httpsServer = https.createServer(sslOptions, app);
+const httpsPort = 8443;
+httpsServer.listen(httpsPort,host, () => {
+  console.log(`Listening at https://localhost:${httpsPort}`);
+});
+
+
+// Start the HTTP server
+var httpServer = http.createServer(app);
+const port = 3000;
+httpServer.listen(port, host, () => {
+  console.log(`Listening at http://localhost:${port}`);
+});

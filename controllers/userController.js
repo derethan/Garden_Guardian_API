@@ -259,15 +259,15 @@ async function addDevice(req, res) {
 
   // If the device does not exist, return an error
   if (!deviceExists) {
-    return res.status(409).json({
+    return res.status(209).json({
       message: "No Device has been registered with the ID: " + device_id,
     });
   }
 
   // Associate the device with the user in the user_device table
   const sql =
-    "INSERT INTO user_device (user_id, device_id, device_name, user_emaul) VALUES (?, ?, ?, ?)";
-  const VALUES = [user_id, device_id, device_name, user_email];
+    "INSERT INTO user_device (user_id, device_id, device_name, user_email) VALUES (?, ?, ?, ?)";
+  const VALUES = [user_email, device_id, device_name, user_email];
 
   try {
     await dbQueryPromise(sql, VALUES);
