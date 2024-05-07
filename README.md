@@ -74,4 +74,4 @@ New features, updates and refinement are being made regularly so be sure to chec
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [GNU GENERAL PUBLIC LICENSE](LICENSE).
