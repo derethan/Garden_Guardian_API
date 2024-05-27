@@ -7,10 +7,13 @@ router.get('/status', (req, res) => {
   res.status(200).json({ status: 'online' });
 });
 
-//Define data Route for Fruityvice API
+//Define data Route to get plant from the datatbase
 router.get('/plants/all', dataController.getAllPlants);
-router.get ('/plants/edible', dataController.getEdiblePlants);
-router.get ('/plants/:name', dataController.getPlantsByName)
+
+// Define routes to Add, Update, etc plants in the database
+router.post('/plants/add', dataController.addPlant);
+
+
 
 
 module.exports = router;
