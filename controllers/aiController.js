@@ -65,12 +65,10 @@ const generatePlantInfo = async (req, res) => {
   const variety = req.body.variety ? req.body.variety.toLowerCase() : null;
 
   const properties = req.body.properties;
-
   // Check if the request is already in the cache
   const cacheKey = `${plant}-${variety}`;
 
   if (cache[cacheKey]) {
-    console.log("Cache hit");
     res.status(200).json(cache[cacheKey]);
     return;
   }
@@ -81,37 +79,8 @@ const generatePlantInfo = async (req, res) => {
   }
 
   try {
-    // Make a request to the OpenAI API
-    const completion = await openai.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a Expert Gardner,  Farmer and Instructor designed to output JSON",
-        },
-        {
-          role: "user",
-          content: `What can you tell me about the following properties for the plant ${plant}${
-            variety ? ` , variety ${variety}` : ""
-          }?
-          
-          ${properties.map((property) => {
-            return property.title + " ";
-          })}
-  
-          maintain the property names and values in the same order as the input.
-
-          If you don't have information about the plant or variety, please respond with "no information available"
-          `,
-        },
-      ],
-      model: "gpt-4o",
-      response_format: { type: "json_object" },
-    });
-
-    // Extract the response from the completion
-    const responseInfo = JSON.parse(completion.choices[0].message.content);
-    console.log(responseInfo);
+    // Query the OpenAI API for the requested properties
+    const responseInfo = await queryAIForPlantInfo(plant, variety, properties);
 
     // Check if the response was "no information available"  - AI could not find any information
     if (responseInfo.Description === "no information available") {
@@ -135,4 +104,41 @@ const generatePlantInfo = async (req, res) => {
   }
 }; // end of generatePlantInfo
 
-module.exports = { getPlantDescription, generatePlantInfo };
+// Function to Query the OpenAI API for Specific Plant Properties
+// Take In: Plant Name, Variety, and Property Titles
+// Return: Plant Information for the requested properties
+const queryAIForPlantInfo = async (plant, variety, properties) => {
+  // Make a request to the OpenAI API
+  const completion = await openai.chat.completions.create({
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a Expert Gardner,  Farmer and Instructor designed to output JSON",
+      },
+      {
+        role: "user",
+        content: `What can you tell me about the following properties for the plant ${plant}${
+          variety ? ` , variety ${variety}` : ""
+        }?
+            
+            ${properties.map((property) => {
+              return property.title + " ";
+            })}
+    
+            maintain the property names and values in the same order as the input.
+  
+            If you don't have information about the plant or variety, please respond with "no information available"
+            `,
+      },
+    ],
+    model: "gpt-4o",
+    response_format: { type: "json_object" },
+  });
+
+  // Extract the response from the completion
+  const responseInfo = JSON.parse(completion.choices[0].message.content);
+  return responseInfo;
+};
+
+module.exports = { getPlantDescription, generatePlantInfo, queryAIForPlantInfo };
