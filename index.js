@@ -42,32 +42,32 @@ app.use('/ai', aiRoutes);
 
 // Your routes and middleware setup
 app.get('/', (req, res) => {
-  res.send('Hello, HTTPS World!');
+  res.send('Hello, I am the API server!');
 });
 
 
 // SSL options
-const sslOptions = {
-  key: fs.readFileSync('./sslcert/ggssl.key', 'utf8'),
-  cert: fs.readFileSync('./sslcert/63be74e1b51ba86b.crt', 'utf8'),
-  ca: fs.readFileSync('./sslcert/gd_bundle-g2-g1.crt', 'utf8')
-};
+// const sslOptions = {
+//   key: fs.readFileSync('./sslcert/ggssl.key', 'utf8'),
+//   cert: fs.readFileSync('./sslcert/63be74e1b51ba86b.crt', 'utf8'),
+//   ca: fs.readFileSync('./sslcert/gd_bundle-g2-g1.crt', 'utf8')
+// };
 
 
 const host = '0.0.0.0';
 
 
-//Start the HTTPS server
-const httpsServer = https.createServer(sslOptions, app);
-const httpsPort = 8443;
-httpsServer.listen(httpsPort,host, () => {
-  console.log(`Listening at https://localhost:${httpsPort}`);
-});
+// //Start the HTTPS server
+// const httpsServer = https.createServer(sslOptions, app);
+// const httpsPort = 8443;
+// httpsServer.listen(httpsPort,host, () => {
+//   console.log(`Listening at https://localhost:${httpsPort}`);
+// });
 
 
 // Start the HTTP server
 var httpServer = http.createServer(app);
-const port = 3000;
+const port = 3420;
 httpServer.listen(port, host, () => {
   console.log(`Listening at http://localhost:${port}`);
 });
