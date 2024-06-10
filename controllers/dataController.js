@@ -20,109 +20,8 @@ const dbQueryPromise = require("../db/dbConnect"); // Import dbconnect.js
 const { queryAIForPlantInfo } = require("./aiController");
 
 /************************************************************
- *  Functions to Add/Remove/Update Plants in the GG Database
+ *  Functions to Handle API Requests to the GG Database
  * ***********************************************************/
-//Route to Get all Plants from the GG Database and return them to the client
-const getAllPlants = async (req, res) => {
-  const SQL = `SELECT * FROM plants`;
-
-  try {
-    const response = await dbQueryPromise(SQL);
-
-    res.status(200).json(response);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      error:
-        "Server Connection Error: Failed to fetch data from the the Database",
-    });
-  }
-};
-
-// Function to Check if the plant already exists in the GG database
-const checkForPlant = async (plant) => {
-  //check if the plant exists in the database
-  const SQL = `SELECT * FROM plants WHERE LOWER(name) = LOWER(?)`;
-  const values = [plant];
-
-  try {
-    const response = await dbQueryPromise(SQL, values);
-
-    //If the response is empty, the plant does not exist
-    if (response.length === 0) {
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.error(error);
-    return false;
-  }
-};
-
-// Function to Check if the Variety exists in the GG database
-const checkForVariety = async (variety) => {
-  //check if the variety exists in the database
-  const SQL = `SELECT * FROM plants_variety WHERE LOWER(name) = LOWER(?)`;
-  const values = [variety];
-
-  try {
-    const response = await dbQueryPromise(SQL, values);
-
-    //If the response is empty, the variety does not exist
-    if (response.length === 0) {
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error(error);
-    return false;
-  }
-};
-
-// Function to add the plant to the GG database
-const addPlantToDB = async (plant, properties) => {
-  // prepare the SQL query to add the plant to the database
-  const SQL = `INSERT INTO plants (name, description, harvestTime, howtoSow, spacing , growsWith, avoid) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-  const values = [plant];
-
-  //Loop through the properties and add them to the values array
-  properties.forEach((property) => {
-    values.push(property.value);
-  });
-
-  try {
-    const response = await dbQueryPromise(SQL, values);
-    return true;
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      error: "Server Connection Error: Failed to add plant to the the Database",
-    });
-  }
-};
-
-// Function to add the variety to the GG database
-const addVarietyToDB = async (plant, variety, properties) => {
-  // prepare the SQL query to add the plant to the database
-  const SQL = `INSERT INTO plants_variety (name, plant, description, harvestTime, howtoSow, spacing , growsWith, avoid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-  const values = [variety, plant];
-
-  //Loop through the properties and add them to the values array
-  properties.forEach((property) => {
-    values.push(property.value);
-  });
-
-  try {
-    const response = await dbQueryPromise(SQL, values);
-    return true;
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      error: "Server Connection Error: Failed to add plant to the the Database",
-    });
-  }
-};
 
 // Route to handle Adding Plants & Varieties to the GG Database
 const addPlant = async (req, res) => {
@@ -214,7 +113,136 @@ const addPlant = async (req, res) => {
   }
 };
 
+//Route to Get all Plants from the GG Database and return them to the client
+const getAllPlants = async (req, res) => {
+  const SQL = `SELECT * FROM plants`;
+
+  try {
+    const response = await dbQueryPromise(SQL);
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error:
+        "Server Connection Error: Failed to fetch data from the the Database",
+    });
+  }
+};
+
+
+//Route to Get all Varieties of a Plant from the GG Database and return them to the client
+const getPlantVariety = async (req, res) => {
+  const plant = req.params.plant;
+
+  const SQL = `SELECT * FROM plants_variety WHERE plant = ?`;
+  const values = [plant];
+
+  try {
+    const response = await dbQueryPromise(SQL, values);
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error:
+        "Server Connection Error: Failed to fetch data from the the Database",
+    });
+  }
+};
+
+/************************************************************
+ * Functions to Add/Remove/Update Plants in the GG Database
+ * ***********************************************************/
+
+// Function to Check if the plant already exists in the GG database
+const checkForPlant = async (plant) => {
+  //check if the plant exists in the database
+  const SQL = `SELECT * FROM plants WHERE LOWER(name) = LOWER(?)`;
+  const values = [plant];
+
+  try {
+    const response = await dbQueryPromise(SQL, values);
+
+    //If the response is empty, the plant does not exist
+    if (response.length === 0) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+};
+
+// Function to Check if the Variety exists in the GG database
+const checkForVariety = async (variety) => {
+  //check if the variety exists in the database
+  const SQL = `SELECT * FROM plants_variety WHERE LOWER(name) = LOWER(?)`;
+  const values = [variety];
+
+  try {
+    const response = await dbQueryPromise(SQL, values);
+
+    //If the response is empty, the variety does not exist
+    if (response.length === 0) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+};
+
+// Function to add the plant to the GG database
+const addPlantToDB = async (plant, properties) => {
+  // prepare the SQL query to add the plant to the database
+  const SQL = `INSERT INTO plants (name, description, harvestTime, howtoSow, spacing , growsWith, avoid) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  const values = [plant];
+
+  //Loop through the properties and add them to the values array
+  properties.forEach((property) => {
+    values.push(property.value);
+  });
+
+  try {
+    const response = await dbQueryPromise(SQL, values);
+    return true;
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "Server Connection Error: Failed to add plant to the the Database",
+    });
+  }
+};
+
+// Function to add the variety to the GG database
+const addVarietyToDB = async (plant, variety, properties) => {
+  // prepare the SQL query to add the plant to the database
+  const SQL = `INSERT INTO plants_variety (name, plant, description, harvestTime, howtoSow, spacing , growsWith, avoid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  const values = [variety, plant];
+
+  //Loop through the properties and add them to the values array
+  properties.forEach((property) => {
+    values.push(property.value);
+  });
+
+  try {
+    const response = await dbQueryPromise(SQL, values);
+    return true;
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "Server Connection Error: Failed to add plant to the the Database",
+    });
+  }
+};
+
+
 module.exports = {
   getAllPlants,
+  getPlantVariety,
   addPlant,
 };
