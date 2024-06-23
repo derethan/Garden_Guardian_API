@@ -17,10 +17,10 @@ router.get('/plants', dataController.getAllPlants);
 // router.get('/plants/:plant', dataController.getPlantDetails);
 
 // Define data Route to Get All Varieties for an a selected plant
-router.get('/plants/:plant/varieties', dataController.getPlantVariety);
+router.get('/plants/:plantName/varieties', dataController.getPlantVariety);
 
 //Define data Route to Get Details of a specified plant variety
-// router.get('/plants/:plant/varieties/:variety', dataController.getVarietyDetails);
+// router.get('/plants/:plantName/varieties/:varietyName', dataController.getVarietyDetails);
 
 
 

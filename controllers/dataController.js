@@ -133,10 +133,10 @@ const getAllPlants = async (req, res) => {
 
 //Route to Get all Varieties of a Plant from the GG Database and return them to the client
 const getPlantVariety = async (req, res) => {
-  const plant = req.params.plant;
+  const plantName = req.params.plantName;
 
   const SQL = `SELECT * FROM plants_variety WHERE plant = ?`;
-  const values = [plant];
+  const values = [plantName];
 
   try {
     const response = await dbQueryPromise(SQL, values);

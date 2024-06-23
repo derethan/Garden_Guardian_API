@@ -1,16 +1,39 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const userController = require('../controllers/userController');
+const userController = require("../controllers/userController");
 
-//Define user related routes
-router.post('/register', userController.register);
-router.post('/login', userController.login);
-router.post('/changePassword', userController.changePassword);
+//Define user account routes
+router.post("/register", userController.register);
+router.post("/login", userController.login);
+router.post("/changePassword", userController.changePassword);
 
-router.post('/addDevice', userController.addDevice);
-router.get ('/checkForDevice', userController.checkForDevice);
+// User device routes
+router.post("/addDevice", userController.addDevice);
+router.get("/checkForDevice", userController.checkForDevice);
 
-router.get('/protected',userController.verifyToken, userController.protectedRoute);
+//User Garden routes
+router.post(
+  "/:userID/gardens",
+  userController.verifyToken,
+  userController.addGarden
+);
+
+router.get(
+  "/:userID/gardens",
+  userController.verifyToken,
+  userController.getGardens
+);
+router.get (
+  "/:userID/gardens/groups",
+  userController.verifyToken,
+  userController.getGardenGroups
+);
+
+// Used for Authentication, Token Verification for protected Pages
+router.get(
+  "/protected",
+  userController.verifyToken,
+  userController.protectedRoute
+);
 
 module.exports = router;
-
