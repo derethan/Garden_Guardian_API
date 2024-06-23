@@ -12,18 +12,30 @@ router.post("/addDevice", userController.addDevice);
 router.get("/checkForDevice", userController.checkForDevice);
 
 //User Garden routes
+
+//CREATE
 router.post(
   "/:userID/gardens",
   userController.verifyToken,
   userController.addGarden
 );
 
+//READ
 router.get(
   "/:userID/gardens",
   userController.verifyToken,
   userController.getGardens
 );
-router.get (
+
+//DELETE
+router.delete(
+  "/:userID/gardens/:gardenID",
+  userController.verifyToken,
+  userController.deleteGarden
+);
+
+// Group routes
+router.get(
   "/:userID/gardens/groups",
   userController.verifyToken,
   userController.getGardenGroups

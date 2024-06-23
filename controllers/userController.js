@@ -328,6 +328,7 @@ async function checkForDevice(req, res) {
 /***************************************
  *  Garden Data Routes - Account Based
  **************************************/
+// Garden CRUD Operations
 async function addGarden(req, res) {
   const userID = req.params.userID;
 
@@ -409,6 +410,32 @@ async function getGardens(req, res) {
   }
 }
 
+async function deleteGarden(req, res) {
+  const userID = req.params.userID;
+  const gardenID = req.params.gardenID;
+
+  // Delete the garden from the user_gardens table
+  const sql = "DELETE FROM user_gardens WHERE user_id = ? AND garden_id = ?";
+  const VALUES = [userID, gardenID];
+
+  // Delete the garden from the gardens table
+  const sql2 = "DELETE FROM gardens WHERE id = ?";
+  const VALUES2 = [gardenID];
+
+  try {
+    await dbQueryPromise(sql, VALUES);
+    console.log("Garden Removed from User Successfully");
+
+    await dbQueryPromise(sql2, VALUES2);
+    console.log("Garden Removed from Gardens Successfully");
+
+    return res.status(200).json({ message: "Garden Deleted Successfully" });
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    return res.status(500).json({ message: messages.dbconnectError });
+  }
+}
+
 async function getGardenGroups(req, res) {
   const userID = req.params.userID;
 
@@ -437,7 +464,6 @@ async function getGardenGroups(req, res) {
     console.log(gardenGroups);
 
     return res.status(200).json({ gardenGroups: gardenGroups });
-    
   } catch (error) {
     console.error(messages.dbconnectError, error);
     return res.status(500).json({ message: messages.dbconnectError });
@@ -529,6 +555,8 @@ module.exports = {
 
   addGarden,
   getGardens,
+  deleteGarden,
+
   getGardenGroups,
 
   protectedRoute,
