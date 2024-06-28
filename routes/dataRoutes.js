@@ -14,13 +14,13 @@ router.post('/plants', dataController.addPlant);
 router.get('/plants', dataController.getAllPlants);
 
 //Define data Route to Get Details of a Specified plant
-// router.get('/plants/:plant', dataController.getPlantDetails);
+router.get('/plants/:plant', dataController.getPlantDetails);
 
 // Define data Route to Get All Varieties for an a selected plant
-router.get('/plants/:plantName/varieties', dataController.getPlantVariety);
+router.get('/plants/:plant/varieties', dataController.getPlantVarieties);
 
 //Define data Route to Get Details of a specified plant variety
-// router.get('/plants/:plantName/varieties/:varietyName', dataController.getVarietyDetails);
+router.get('/plants/:plant/varieties/:variety', dataController.getVarietyDetails);
 
 
 
