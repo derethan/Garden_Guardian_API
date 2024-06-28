@@ -11,8 +11,7 @@ router.post("/changePassword", userController.changePassword);
 router.post("/addDevice", userController.addDevice);
 router.get("/checkForDevice", userController.checkForDevice);
 
-//User Garden routes
-
+// Garden routes
 //CREATE
 router.post(
   "/:userID/gardens",
@@ -35,11 +34,36 @@ router.delete(
 );
 
 // Group routes
+//CREATE
+router.post(
+  "/:userID/gardens/groups",
+  userController.verifyToken,
+  userController.addGardenGroup
+);
+//READ
 router.get(
   "/:userID/gardens/groups",
   userController.verifyToken,
   userController.getGardenGroups
 );
+
+//DELETE
+router.delete(
+  "/:userID/gardens/groups/:groupID",
+  userController.verifyToken,
+  userController.deleteGardenGroup
+);
+
+
+// Plant routes
+//CREATE
+router.post(
+  "/:userID/gardens/plants",
+  userController.verifyToken,
+  userController.addGardenPlant
+);
+
+
 
 // Used for Authentication, Token Verification for protected Pages
 router.get(
