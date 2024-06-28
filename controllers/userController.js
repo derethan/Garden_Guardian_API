@@ -329,6 +329,8 @@ async function checkForDevice(req, res) {
  *  Garden Data Routes - Account Based
  **************************************/
 // Garden CRUD Operations
+
+//TODO: HANDLE Transactions for multiple queries
 async function addGarden(req, res) {
   const userID = req.params.userID;
 
@@ -373,6 +375,107 @@ async function addGarden(req, res) {
     return res.status(500).json({ message: messages.dbconnectError });
   }
 }
+//TODO: HANDLE Transactions for multiple queries
+async function addGardenGroup(req, res) {
+  const userID = req.params.userID;
+  const formData = req.body.formData;
+
+  const groupData = {
+    groupName: formData.groupName,
+    gardenID: formData.gardenID,
+    type: formData.groupType || "soil",
+    ownership: "owner",
+    permissions: "modify",
+  };
+
+  console.log(groupData);
+
+  try {
+    // Add the group to the Database
+    const SQL = "INSERT INTO garden_groups (name, type) VALUES (?, ?)";
+    const VALUES = [groupData.groupName, groupData.type];
+    const result = await dbQueryPromise(SQL, VALUES);
+    const groupID = result.insertId;
+
+    console.log("Group Added Successfully");
+
+    // Associate the group with the garden in the garden_groups table
+    const SQL2 = `INSERT INTO user_groups (group_id, garden_id, user_id, ownership, user_permissions) VALUES (?, ?, ?, ?, ?)`;
+    const VALUES2 = [
+      groupID,
+      groupData.gardenID,
+      userID,
+      groupData.ownership,
+      groupData.permissions,
+    ];
+    const result2 = await dbQueryPromise(SQL2, VALUES2);
+
+    if (result && result2) {
+      console.log("Group Associated with Garden Successfully");
+      return res.status(201).json({ message: "Group Added Successfully" });
+    }
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    return res.status(500).json({ message: messages.dbconnectError });
+  }
+}
+async function addGardenPlant(req, res) {
+  const userID = req.params.userID;
+  const data = req.body;
+
+  const defaultPlantName = data.variety_name
+    ? data.variety_name
+    : data.plant_name;
+
+  const plantData = {
+    plantID: data.plant_id,
+    varietyID: data.variety_id,
+    plantFriendlyName: data.plantFriendlyName || defaultPlantName,
+    gardenID: data.gardenData.gardenID,
+    groupID: data.gardenData.groupID,
+    ownership: "owner",
+    permissions: "modify",
+  };
+
+  console.log(plantData);
+
+  try {
+    // Add the plant to the Database
+    const SQL =
+      "INSERT INTO garden_plants (customName, plant_id, variety_id) VALUES (?,?,?)";
+    const VALUES = [
+      plantData.plantFriendlyName,
+      plantData.plantID,
+      plantData.varietyID,
+    ];
+    const result = await dbQueryPromise(SQL, VALUES);
+    const gardenPlantID = result.insertId;
+
+    console.log("Plant Added Successfully ", gardenPlantID);
+
+    // // Associate the plant with the garden in the garden_plants table
+    const SQL2 = `INSERT INTO user_plants (user_id, garden_id, group_id, gardenPlant_id, ownership, user_permissions) VALUES (?, ?, ?, ?, ?, ?)`;
+    const VALUES2 = [
+      userID,
+      plantData.gardenID,
+      plantData.groupID,
+      gardenPlantID,
+      plantData.ownership,
+      plantData.permissions,
+    ];
+    const result2 = await dbQueryPromise(SQL2, VALUES2);
+
+    console.log("Plant Associated with User Successfully");
+
+    if (result && result2) {
+      console.log("Plant Associated with Garden Successfully");
+      return res.status(201).json({ message: "Plant Added Successfully" });
+    }
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    return res.status(500).json({ message: messages.dbconnectError });
+  }
+}
 
 async function getGardens(req, res) {
   const userID = req.params.userID;
@@ -400,42 +503,12 @@ async function getGardens(req, res) {
       permissions: garden.user_permissions,
     }));
 
-    // console.log(gardens);
-    // console.log("-----------------------------------------------");
-    // console.log(result);
     return res.status(200).json({ gardenData: gardens });
   } catch (error) {
     console.error(messages.dbconnectError, error);
     return res.status(500).json({ message: messages.dbconnectError });
   }
 }
-
-async function deleteGarden(req, res) {
-  const userID = req.params.userID;
-  const gardenID = req.params.gardenID;
-
-  // Delete the garden from the user_gardens table
-  const sql = "DELETE FROM user_gardens WHERE user_id = ? AND garden_id = ?";
-  const VALUES = [userID, gardenID];
-
-  // Delete the garden from the gardens table
-  const sql2 = "DELETE FROM gardens WHERE id = ?";
-  const VALUES2 = [gardenID];
-
-  try {
-    await dbQueryPromise(sql, VALUES);
-    console.log("Garden Removed from User Successfully");
-
-    await dbQueryPromise(sql2, VALUES2);
-    console.log("Garden Removed from Gardens Successfully");
-
-    return res.status(200).json({ message: "Garden Deleted Successfully" });
-  } catch (error) {
-    console.error(messages.dbconnectError, error);
-    return res.status(500).json({ message: messages.dbconnectError });
-  }
-}
-
 async function getGardenGroups(req, res) {
   const userID = req.params.userID;
 
@@ -461,9 +534,57 @@ async function getGardenGroups(req, res) {
       permissions: group.user_permissions,
     }));
 
-    console.log(gardenGroups);
-
     return res.status(200).json({ gardenGroups: gardenGroups });
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    return res.status(500).json({ message: messages.dbconnectError });
+  }
+}
+async function deleteGarden(req, res) {
+  const userID = req.params.userID;
+  const gardenID = req.params.gardenID;
+
+  // Delete the garden from the user_gardens table
+  const sql = "DELETE FROM user_gardens WHERE user_id = ? AND garden_id = ?";
+  const VALUES = [userID, gardenID];
+
+  // Delete the garden from the gardens table
+  const sql2 = "DELETE FROM gardens WHERE id = ?";
+  const VALUES2 = [gardenID];
+
+  try {
+    await dbQueryPromise(sql, VALUES);
+    console.log("Garden Removed from User Successfully");
+
+    await dbQueryPromise(sql2, VALUES2);
+    console.log("Garden Removed from Gardens Successfully");
+
+    return res.status(200).json({ message: "Garden Deleted Successfully" });
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    return res.status(500).json({ message: messages.dbconnectError });
+  }
+}
+async function deleteGardenGroup(req, res) {
+  const userID = req.params.userID;
+  const groupID = req.params.groupID;
+
+  // Delete the group from the user_groups table
+  const sql = "DELETE FROM user_groups WHERE user_id = ? AND group_id = ?";
+  const VALUES = [userID, groupID];
+
+  // Delete the group from the garden_groups table
+  const sql2 = "DELETE FROM garden_groups WHERE id = ?";
+  const VALUES2 = [groupID];
+
+  try {
+    await dbQueryPromise(sql, VALUES);
+    console.log("Group Removed from User Successfully");
+
+    await dbQueryPromise(sql2, VALUES2);
+    console.log("Group Removed from Groups Successfully");
+
+    return res.status(200).json({ message: "Group Deleted Successfully" });
   } catch (error) {
     console.error(messages.dbconnectError, error);
     return res.status(500).json({ message: messages.dbconnectError });
@@ -488,15 +609,14 @@ async function protectedRoute(req, res) {
  * ************************************/
 function verifyToken(req, res, next) {
   // Get the token from the request headers
-  const tokenHeader = req.headers.authorization;
-
-  let token = tokenHeader.split(" ")[1];
+  let token = req.headers.authorization
+    ? req.headers.authorization.split(" ")[1]
+    : null;
 
   // If the token is not provided, return an error
   if (!token) {
-    return res.status(403).json({ message: "No token provided" });
+    return res.status(403).json({ message: "Secure Route, No token provided" });
   }
-
   // Verify the token
   jwt.verify(token, process.env.TOKEN_SECRET, (error, decoded) => {
     const tokenData = jwt.decode(token);
@@ -520,13 +640,13 @@ function verifyToken(req, res, next) {
           { id: tokenData.id, name: tokenData.name, email: tokenData.email },
           process.env.TOKEN_SECRET,
           {
-            expiresIn: "1h",
+            expiresIn: "24h",
           }
         );
         token = newToken; // Update the token with the new token
 
         console.log(
-          "Token Expired for user" + tokenData.email + " New Token Generated"
+          "Token Expired for user: " + tokenData.email + ", New Token Generated"
         );
       } else {
         return res.status(401).json({ message: "Unauthorized" });
@@ -541,6 +661,18 @@ function verifyToken(req, res, next) {
     next(); // Continue to the next middleware
   }); // End of jwt.verify
 } // End of verifyToken
+
+//Generate a function to create a permenant JWT Token for Testing
+function generateDebugToken() {
+  const token = jwt.sign(
+    { id: 1, name: "Test User", email: "test@gardenguardian.app" },
+    process.env.TOKEN_SECRET
+  );
+
+  console.log("Debug Token: " + token);
+
+  return token;
+}
 
 /***************************************
  *  Export the functions
@@ -557,7 +689,11 @@ module.exports = {
   getGardens,
   deleteGarden,
 
+  addGardenGroup,
   getGardenGroups,
+  deleteGardenGroup,
+
+  addGardenPlant,
 
   protectedRoute,
   verifyToken,
