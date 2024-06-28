@@ -10,7 +10,7 @@ const router = express.Router();
 const aiController = require('../controllers/aiController');
 
 // Route to get the description of a plant
-router.get('/:plantName', aiController.getPlantDescription);
+router.get('/plants/:plant', aiController.getPlantDescription);
 
 //Route to Generate the Information for user Added Plants
 router.post('/generatePlantInfo', aiController.generatePlantInfo);

@@ -15,9 +15,13 @@ const axios = require("axios");
 // Cache to store the responses from the AI
 const cache = {};
 
+/***************************************
+ * ROUTE HANDLERS
+ * ************************************/
+
 const getPlantDescription = async (req, res) => {
   const url = process.env.AI_URL;
-  const plant = req.params.plantName;
+  const plant = req.params.plant
 
   const aiQuery = `Provide me description of ${plant} in 2 sentences or less.`;
   // const vagueness = vaguenessInput.value;
@@ -104,6 +108,10 @@ const generatePlantInfo = async (req, res) => {
   }
 }; // end of generatePlantInfo
 
+
+/***************************************
+ * HELPER FUNCTIONS
+ * ************************************/
 // Function to Query the OpenAI API for Specific Plant Properties
 // Take In: Plant Name, Variety, and Property Titles
 // Return: Plant Information for the requested properties
