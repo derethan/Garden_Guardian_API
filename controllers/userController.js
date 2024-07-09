@@ -330,6 +330,7 @@ async function checkForDevice(req, res) {
  **************************************/
 // Garden CRUD Operations
 
+//CREATE
 //TODO: HANDLE Transactions for multiple queries
 async function addGarden(req, res) {
   const userID = req.params.userID;
@@ -375,7 +376,6 @@ async function addGarden(req, res) {
     return res.status(500).json({ message: messages.dbconnectError });
   }
 }
-//TODO: HANDLE Transactions for multiple queries
 async function addGardenGroup(req, res) {
   const userID = req.params.userID;
   const formData = req.body.formData;
@@ -387,8 +387,6 @@ async function addGardenGroup(req, res) {
     ownership: "owner",
     permissions: "modify",
   };
-
-  console.log(groupData);
 
   try {
     // Add the group to the Database
@@ -435,18 +433,20 @@ async function addGardenPlant(req, res) {
     groupID: data.gardenData.groupID,
     ownership: "owner",
     permissions: "modify",
+    growthStage: "seed",
+    startDate: new Date(),
   };
-
-  console.log(plantData);
 
   try {
     // Add the plant to the Database
     const SQL =
-      "INSERT INTO garden_plants (customName, plant_id, variety_id) VALUES (?,?,?)";
+      "INSERT INTO garden_plants (customName, plant_id, variety_id, growth_stage, start_date) VALUES (?,?,?,?,?)";
     const VALUES = [
       plantData.plantFriendlyName,
       plantData.plantID,
       plantData.varietyID,
+      plantData.growthStage,
+      plantData.startDate,
     ];
     const result = await dbQueryPromise(SQL, VALUES);
     const gardenPlantID = result.insertId;
@@ -477,6 +477,7 @@ async function addGardenPlant(req, res) {
   }
 }
 
+//READ
 async function getGardens(req, res) {
   const userID = req.params.userID;
 
@@ -540,6 +541,73 @@ async function getGardenGroups(req, res) {
     return res.status(500).json({ message: messages.dbconnectError });
   }
 }
+async function getGardenPlants(req, res) {
+  const userID = req.params.userID;
+
+  // Query the Database for all plants in the garden_plants table associated with the user in the user_plants table
+  const sql = `
+  SELECT 
+    garden_plants.id AS garden_plant_id, 
+    garden_plants.*, 
+    user_plants.garden_id, 
+    user_plants.group_id, 
+    user_plants.ownership, 
+    user_plants.user_permissions,
+    plants.name AS plant_name,
+    plants_variety.name AS variety_name,
+    COALESCE(plants_variety.common_name, plants.common_name) AS common_name,
+    COALESCE(plants_variety.description, plants.description) AS description,
+    COALESCE(plants_variety.howtosow, plants.howtosow) AS howToSow,
+    COALESCE(plants_variety.harvesttime, plants.harvesttime) AS harvestTime,
+    COALESCE(plants_variety.growsWith, plants.growsWith) AS growsWith,
+    COALESCE(plants_variety.avoid, plants.avoid) AS avoid
+  FROM garden_plants
+  JOIN USER_PLANTS on garden_plants.id = user_plants.gardenPlant_id
+  JOIN plants ON garden_plants.plant_id = plants.id
+  LEFT JOIN plants_variety ON garden_plants.variety_id = plants_variety.id
+  WHERE user_plants.user_id = ?`;
+  const VALUES = [userID];
+
+  try {
+    const result = await dbQueryPromise(sql, VALUES);
+
+    //Restructure the Data to send to the client
+    const gardenPlants = result.map((plant) => ({
+      userID: userID,
+      gardenID: plant.garden_id,
+      groupID: plant.group_id,
+      gardenPlantID: plant.garden_plant_id,
+      plantID: plant.plant_id,
+      varietyID: plant.variety_id,
+      customName: plant.customName,
+      ownership: plant.ownership,
+      permissions: plant.user_permissions,
+      growthStage: plant.growth_stage,
+      startDate: plant.start_date,
+      lastWatering: plant.last_watering,
+      lastFeeding: plant.last_feeding,
+      plantData: {
+        plantName: plant.plant_name,
+        varietyName: plant.variety_name,
+        commonName: plant.common_name,
+        description: plant.description,
+        howToSow: plant.howToSow,
+        harvestTime: plant.harvestTime,
+        growsWith: plant.growsWith,
+        avoid: plant.avoid,
+      },
+    }));
+
+    // console.log(gardenPlants);
+
+    return res.status(200).json({ gardenPlants: gardenPlants });
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    return res.status(500).json({ message: messages.dbconnectError });
+  }
+}
+
+//DELETE
 async function deleteGarden(req, res) {
   const userID = req.params.userID;
   const gardenID = req.params.gardenID;
@@ -569,22 +637,68 @@ async function deleteGardenGroup(req, res) {
   const userID = req.params.userID;
   const groupID = req.params.groupID;
 
-  // Delete the group from the user_groups table
-  const sql = "DELETE FROM user_groups WHERE user_id = ? AND group_id = ?";
-  const VALUES = [userID, groupID];
-
   // Delete the group from the garden_groups table
-  const sql2 = "DELETE FROM garden_groups WHERE id = ?";
-  const VALUES2 = [groupID];
+  const deleteFromGardenGroups = "DELETE FROM garden_groups WHERE id = ?";
+  const deleteFromGardenGroups_values = [groupID];
+
+  // Delete the group from the user_groups table
+  const deleteFromUserGroups =
+    "DELETE FROM user_groups WHERE user_id = ? AND group_id = ?";
+  const deleteFromUserGroups_values = [userID, groupID];
 
   try {
-    await dbQueryPromise(sql, VALUES);
-    console.log("Group Removed from User Successfully");
+    await dbQueryPromise(
+      deleteFromUserGroups,
+      deleteFromUserGroups_values
+    ).then(async () => {
+      await dbQueryPromise(
+        deleteFromGardenGroups,
+        deleteFromGardenGroups_values
+      );
+      console.log("Group Removed from User Successfully");
+    });
 
-    await dbQueryPromise(sql2, VALUES2);
-    console.log("Group Removed from Groups Successfully");
+    console.log("Group Removed from Garden Successfully");
 
     return res.status(200).json({ message: "Group Deleted Successfully" });
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    return res.status(500).json({ message: messages.dbconnectError });
+  }
+}
+async function deleteGardenPlant(req, res) {
+  const userID = req.params.userID;
+  const gardenPlantID = req.params.gardenPlantID;
+
+  if (!userID || !gardenPlantID) {
+    console.error("Invalid Request Parameters");
+    return res.status(400).json({ message: "Invalid Request Parameters" });
+  }
+
+  // Delete the plant from the garden_plants table
+  const deleteFromGardenPlants = "DELETE FROM garden_plants WHERE id = ?";
+  const deleteFromGardenPlants_values = [gardenPlantID];
+
+  // Delete the plant from the user_plants table
+  const deleteFromUserPlants =
+    "DELETE FROM user_plants WHERE user_id = ? AND gardenPlant_id = ?";
+  const deleteFromUserPlants_values = [userID, gardenPlantID];
+
+  try {
+    await dbQueryPromise(
+      deleteFromUserPlants,
+      deleteFromUserPlants_values
+    ).then(async () => {
+      await dbQueryPromise(
+        deleteFromGardenPlants,
+        deleteFromGardenPlants_values
+      );
+      console.log("Plant Removed from garden_Plants Successfully");
+    });
+
+    console.log("Plant Removed from User_plants Successfully");
+
+    return res.status(200).json({ message: "Plant Deleted Successfully" });
   } catch (error) {
     console.error(messages.dbconnectError, error);
     return res.status(500).json({ message: messages.dbconnectError });
@@ -694,6 +808,8 @@ module.exports = {
   deleteGardenGroup,
 
   addGardenPlant,
+  getGardenPlants,
+  deleteGardenPlant,
 
   protectedRoute,
   verifyToken,
