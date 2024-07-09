@@ -21,7 +21,12 @@ const cache = {};
 
 const getPlantDescription = async (req, res) => {
   const url = process.env.AI_URL;
-  const plant = req.params.plant
+  const plant = req.params.plant;
+
+  if (!plant) {
+    res.status(400).json({ error: "Plant name is required" });
+    return;
+  }
 
   const aiQuery = `Provide me description of ${plant} in 2 sentences or less.`;
   // const vagueness = vaguenessInput.value;
@@ -65,34 +70,38 @@ const getPlantDescription = async (req, res) => {
 //Function to Generate Plant infromation for user Added Plants
 const generatePlantInfo = async (req, res) => {
   //Format the request to lowercase for consistency
-  const plant = req.body.plantName ? req.body.plantName.toLowerCase() : null;
-  const variety = req.body.variety ? req.body.variety.toLowerCase() : null;
+  const plantName = req.body.plantName
+    ? req.body.plantName.toLowerCase()
+    : null;
+  const varietyName = req.body.varietyName
+    ? req.body.varietyName.toLowerCase()
+    : null;
+  const PlantProperties = req.body.plantProperties;
 
-  const properties = req.body.properties;
   // Check if the request is already in the cache
-  const cacheKey = `${plant}-${variety}`;
+  const cacheKey = `${plantName}-${varietyName}`;
 
   if (cache[cacheKey]) {
-    res.status(200).json(cache[cacheKey]);
-    return;
+    return res.status(200).json(cache[cacheKey]);
   }
 
-  if (!plant) {
-    res.status(201).json({ error: "Plant name is required" });
+  if (!plantName) {
+    res.status(400).json({ error: "Plant name is required" });
     return;
   }
 
   try {
     // Query the OpenAI API for the requested properties
-    const responseInfo = await queryAIForPlantInfo(plant, variety, properties);
+    const responseInfo = await queryAIForPlantInfo(
+      plantName,
+      varietyName,
+      PlantProperties
+    );
 
     // Check if the response was "no information available"  - AI could not find any information
     if (responseInfo.Description === "no information available") {
-      console.log("No information available");
-
       cache[cacheKey] = "No information available";
-      res.status(201).json("No information available");
-      return;
+      return res.status(201).json("No information available");
     }
 
     // Cache the response
@@ -107,7 +116,6 @@ const generatePlantInfo = async (req, res) => {
     });
   }
 }; // end of generatePlantInfo
-
 
 /***************************************
  * HELPER FUNCTIONS
@@ -126,9 +134,8 @@ const queryAIForPlantInfo = async (plant, variety, properties) => {
       },
       {
         role: "user",
-        content: `What can you tell me about the following properties for the plant ${plant}${
-          variety ? ` , variety ${variety}` : ""
-        }?
+        content: `What can you tell me about the following properties for the plant ${plant}
+        ${variety ? ` , variety ${variety}` : ""}?
             
             ${properties.map((property) => {
               return property.title + " ";
@@ -149,4 +156,8 @@ const queryAIForPlantInfo = async (plant, variety, properties) => {
   return responseInfo;
 };
 
-module.exports = { getPlantDescription, generatePlantInfo, queryAIForPlantInfo };
+module.exports = {
+  getPlantDescription,
+  generatePlantInfo,
+  queryAIForPlantInfo,
+};
