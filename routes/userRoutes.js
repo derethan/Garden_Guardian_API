@@ -63,6 +63,19 @@ router.post(
   userController.addGardenPlant
 );
 
+//READ
+router.get(
+  "/:userID/gardens/plants",
+  userController.verifyToken,
+  userController.getGardenPlants
+);
+
+//DELETE
+router.delete(
+  "/:userID/gardens/plants/:gardenPlantID",
+  userController.verifyToken,
+  userController.deleteGardenPlant
+);
 
 
 // Used for Authentication, Token Verification for protected Pages
