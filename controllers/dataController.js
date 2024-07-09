@@ -128,6 +128,31 @@ const getAllPlants = async (req, res) => {
   }
 };
 
+//Route to Get all Varieties of a Plant from the GG Database and return them to the client
+const getPlantVarieties = async (req, res) => {
+  const plant = req.params.plant || null;
+
+  const SQL = isNaN(plant)
+    ? `SELECT * FROM plants_variety WHERE plant = ?`
+    : `SELECT * FROM plants_variety WHERE id = ?`;
+  const values = [plant];
+
+  try {
+    const response = await dbQueryPromise(SQL, values);
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error:
+        "Server Connection Error: Failed to fetch data from the the Database",
+    });
+  }
+};
+
+// TODO: Merge these 2 routes and find a way to join both tables from the database
+//       and retrive the info based on a supplied Plant or variety Name/ID
+//       For refference see: userController.getGardenPlants
 const getPlantDetails = async (req, res) => {
   const plant = req.params.plant || null;
 
@@ -157,29 +182,6 @@ const getPlantDetails = async (req, res) => {
     });
   }
 };
-
-//Route to Get all Varieties of a Plant from the GG Database and return them to the client
-const getPlantVarieties = async (req, res) => {
-  const plant = req.params.plant || null;
-
-  const SQL = isNaN(plant)
-    ? `SELECT * FROM plants_variety WHERE plant = ?`
-    : `SELECT * FROM plants_variety WHERE id = ?`;
-  const values = [plant];
-
-  try {
-    const response = await dbQueryPromise(SQL, values);
-
-    res.status(200).json(response);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      error:
-        "Server Connection Error: Failed to fetch data from the the Database",
-    });
-  }
-};
-
 const getVarietyDetails = async (req, res) => {
   const variety = req.params.variety || null;
 
