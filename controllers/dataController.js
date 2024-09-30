@@ -40,9 +40,7 @@ const addPlant = async (req, res) => {
   // useCase: Used when a plant is added without a variety, prevent duplicate plants
   if (plantExists && !variety) {
     console.log("Plant already exists in the database");
-    return res
-      .status(201)
-      .json({ error: `Oops! This Plant has already been added` });
+    return res.status(201).json({ error: `Oops! This Plant has already been added` });
   }
 
   // Handle the case where the plant does not exist in the database
@@ -54,9 +52,7 @@ const addPlant = async (req, res) => {
   if (!plantExists) {
     // If Variety is not provided, use generated plant info for Main plant species from client
     if (!variety) {
-      console.log(
-        "Variety not provided, adding Only the plant to the database"
-      );
+      console.log("Variety not provided, adding Only the plant to the database");
 
       // If the Plant is added to the database, return a success message
       if (addPlantToDB(plant, properties)) {
@@ -67,19 +63,15 @@ const addPlant = async (req, res) => {
 
     // If variety is provided, generate default Plant data for Main plant species before adding to Database
     if (variety) {
-      console.log(
-        "Variety provided, Creating Plant Info for Main Plant Species"
-      );
+      console.log("Variety provided, Creating Plant Info for Main Plant Species");
 
       // Query AI for Plant Information
       const plantInfo = await queryAIForPlantInfo(plant, null, properties);
 
       // Convert the plantInfo to an Array of objects with a Title and Value
-      const convertedPlantInfo = Object.entries(plantInfo).map(
-        ([key, value]) => {
-          return { title: key, value: value };
-        }
-      );
+      const convertedPlantInfo = Object.entries(plantInfo).map(([key, value]) => {
+        return { title: key, value: value };
+      });
 
       // If the Plant is added to the database, return a success message
       if (addPlantToDB(plant, convertedPlantInfo)) {
@@ -97,9 +89,7 @@ const addPlant = async (req, res) => {
 
   if (varietyExists && variety) {
     console.log("Variety already exists in the database");
-    return res
-      .status(201)
-      .json({ error: `Oops! This Variety of ${plant} has already been added` });
+    return res.status(201).json({ error: `Oops! This Variety of ${plant} has already been added` });
   }
 
   // If the Variety does not exist in the database, add it
@@ -122,8 +112,7 @@ const getAllPlants = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({
-      error:
-        "Server Connection Error: Failed to fetch data from the the Database",
+      error: "Server Connection Error: Failed to fetch data from the the Database",
     });
   }
 };
@@ -132,9 +121,7 @@ const getAllPlants = async (req, res) => {
 const getPlantVarieties = async (req, res) => {
   const plant = req.params.plant || null;
 
-  const SQL = isNaN(plant)
-    ? `SELECT * FROM plants_variety WHERE plant = ?`
-    : `SELECT * FROM plants_variety WHERE id = ?`;
+  const SQL = isNaN(plant) ? `SELECT * FROM plants_variety WHERE plant = ?` : `SELECT * FROM plants_variety WHERE id = ?`;
   const values = [plant];
 
   try {
@@ -144,8 +131,7 @@ const getPlantVarieties = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({
-      error:
-        "Server Connection Error: Failed to fetch data from the the Database",
+      error: "Server Connection Error: Failed to fetch data from the the Database",
     });
   }
 };
@@ -156,19 +142,12 @@ const getPlantVarieties = async (req, res) => {
 const getPlantDetails = async (req, res) => {
   const plant = req.params.plant || null;
 
-  const SQL = isNaN(plant)
-    ? `SELECT * FROM plants WHERE name = ?`
-    : `SELECT * FROM plants WHERE id = ?`;
-  const values = [plant];
-
   try {
-    const response = await dbQueryPromise(SQL, values);
+    const response = await queryPlantDetails(plant);
 
     //If the response is empty, the plant does not exist
     if (response.length === 0) {
-      return res
-        .status(404)
-        .json({ error: `Oops! ${plant} does not exist in the database` });
+      return res.status(404).json({ error: `Oops! ${plant} does not exist in the database` });
     }
 
     let data = response[0]; //Get the first item in the response array
@@ -177,17 +156,14 @@ const getPlantDetails = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({
-      error:
-        "Server Connection Error: Failed to fetch data from the the Database",
+      error: "Server Connection Error: Failed to fetch data from the the Database",
     });
   }
 };
 const getVarietyDetails = async (req, res) => {
   const variety = req.params.variety || null;
 
-  const SQL = isNaN(variety)
-    ? `SELECT * FROM plants_variety WHERE name = ?`
-    : `SELECT * FROM plants_variety WHERE id = ?`;
+  const SQL = isNaN(variety) ? `SELECT * FROM plants_variety WHERE name = ?` : `SELECT * FROM plants_variety WHERE id = ?`;
 
   const values = [variety];
 
@@ -196,9 +172,7 @@ const getVarietyDetails = async (req, res) => {
 
     //If the response is empty, the variety does not exist
     if (response.length === 0) {
-      return res
-        .status(404)
-        .json({ error: `Oops! ${variety} does not exist in the database` });
+      return res.status(404).json({ error: `Oops! ${variety} does not exist in the database` });
     }
 
     let data = response[0];
@@ -207,8 +181,7 @@ const getVarietyDetails = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({
-      error:
-        "Server Connection Error: Failed to fetch data from the the Database",
+      error: "Server Connection Error: Failed to fetch data from the the Database",
     });
   }
 };
@@ -216,6 +189,35 @@ const getVarietyDetails = async (req, res) => {
 /************************************************************
  * Functions to Add/Remove/Update Plants in the GG Database
  * ***********************************************************/
+//Function to query the Database for the plant details
+const queryPlantDetails = async (plant) => {
+  const SQL = isNaN(plant) ? `SELECT * FROM plants WHERE LOWER(name) = LOWER(?)` : `SELECT * FROM plants WHERE id = ?`;
+  const values = [plant];
+
+  try {
+    const response = await dbQueryPromise(SQL, values);
+
+    return response;
+  } catch (error) {
+    console.error(error);
+    return;
+  }
+};
+
+//Function to update a plant desctiption to the GG database
+const updatePlantDescription = async (plant, description) => {
+  // prepare the SQL query to add the plant to the database
+  const SQL = `UPDATE plants SET description = ? WHERE LOWER(name) = LOWER(?)`;
+  const values = [description, plant];
+
+  try {
+    const response = await dbQueryPromise(SQL, values);
+    return response;
+  } catch (error) {
+    console.error(error);
+    return;
+  }
+};
 
 // Function to Check if the plant already exists in the GG database
 const checkForPlant = async (plant) => {
@@ -308,4 +310,6 @@ module.exports = {
   getPlantVarieties,
   getVarietyDetails,
   addPlant,
+  queryPlantDetails,
+  updatePlantDescription,
 };

@@ -19,7 +19,7 @@ const cache = {};
  * ROUTE HANDLERS
  * ************************************/
 
-const getPlantDescription = async (req, res) => {
+const generatePlantDescription = async (req, res) => {
   const url = process.env.AI_URL;
   const plant = req.params.plant;
 
@@ -34,8 +34,7 @@ const getPlantDescription = async (req, res) => {
   const messages = [
     {
       role: "system",
-      content:
-        "Hello, I am a Gardening Expert. I can help you with any gardening problems you may have. Please describe your problem below.",
+      content: "Hello, I am a Gardening Expert. I can help you with any gardening problems you may have. Please describe your problem below.",
     },
     {
       role: "user",
@@ -45,7 +44,7 @@ const getPlantDescription = async (req, res) => {
 
   //Make an API call to OpenAI with Axios
   const data = {
-    model: "gpt-3.5-turbo",
+    model: "gpt-4o-mini",
     messages: messages,
     temperature: 0.1,
   };
@@ -56,7 +55,6 @@ const getPlantDescription = async (req, res) => {
 
   try {
     const response = await axios.post(url, data, { headers: headers });
-
     responseMessage = response.data.choices[0].message.content;
     res.status(200).json(responseMessage);
   } catch (error) {
@@ -65,17 +63,32 @@ const getPlantDescription = async (req, res) => {
       error: "Server Connection Error: Failed to connect to the OpenAI API",
     });
   }
+
+  // Check if the plant has a description in the database, if not, add it
+  const { queryPlantDetails } = require("./dataController");
+  const plantDetails = await queryPlantDetails(plant);
+
+  const plantDesc = plantDetails[0] ? plantDetails[0].description : null;
+
+  // If a plant Description is not found in the database, add it
+  if (!plantDesc) {
+    const { updatePlantDescription } = require("./dataController");
+    updatePlantDescription(plant, responseMessage).then((response) => {
+      // Check if the plant was added successfully
+      if (response) {
+        console.log("Plant Description Added Successfully");
+      } else {
+        console.log("Failed to add Plant Description");
+      }
+    });
+  }
 }; // end of getPlantDescription
 
 //Function to Generate Plant infromation for user Added Plants
 const generatePlantInfo = async (req, res) => {
   //Format the request to lowercase for consistency
-  const plantName = req.body.plantName
-    ? req.body.plantName.toLowerCase()
-    : null;
-  const varietyName = req.body.varietyName
-    ? req.body.varietyName.toLowerCase()
-    : null;
+  const plantName = req.body.plantName ? req.body.plantName.toLowerCase() : null;
+  const varietyName = req.body.varietyName ? req.body.varietyName.toLowerCase() : null;
   const PlantProperties = req.body.plantProperties;
 
   // Check if the request is already in the cache
@@ -92,11 +105,7 @@ const generatePlantInfo = async (req, res) => {
 
   try {
     // Query the OpenAI API for the requested properties
-    const responseInfo = await queryAIForPlantInfo(
-      plantName,
-      varietyName,
-      PlantProperties
-    );
+    const responseInfo = await queryAIForPlantInfo(plantName, varietyName, PlantProperties);
 
     // Check if the response was "no information available"  - AI could not find any information
     if (responseInfo.Description === "no information available") {
@@ -129,8 +138,7 @@ const queryAIForPlantInfo = async (plant, variety, properties) => {
     messages: [
       {
         role: "system",
-        content:
-          "You are a Expert Gardner,  Farmer and Instructor designed to output JSON",
+        content: "You are a Expert Agronomist, Farmer and Gardner designed to output JSON",
       },
       {
         role: "user",
@@ -157,7 +165,7 @@ const queryAIForPlantInfo = async (plant, variety, properties) => {
 };
 
 module.exports = {
-  getPlantDescription,
+  generatePlantDescription,
   generatePlantInfo,
   queryAIForPlantInfo,
 };

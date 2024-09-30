@@ -77,6 +77,13 @@ router.delete(
   userController.deleteGardenPlant
 );
 
+//UPDATE
+router.put(
+  "/:userID/gardens/plants/:gardenPlantID",
+  userController.verifyToken,
+  userController.updateGardenPlant
+);
+
 
 // Used for Authentication, Token Verification for protected Pages
 router.get(

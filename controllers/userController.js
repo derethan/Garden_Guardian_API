@@ -7,8 +7,7 @@ const jwt = require("jsonwebtoken");
 const sensorController = require("./sensorController");
 
 const messages = {
-  emailExists:
-    "A user has already registered with this email address, Please enter another email address to continue.",
+  emailExists: "A user has already registered with this email address, Please enter another email address to continue.",
   noEmailExists: "No account is registered with this email address",
   registerSuccess: "User registered successfully",
   loginSuccess: "User logged in successfully",
@@ -29,9 +28,7 @@ const crypto = require("crypto");
 const hashPassword = (password) => {
   let salt = crypto.randomBytes(16).toString("hex");
   let iterations = 10000;
-  let hash = crypto
-    .pbkdf2Sync(password, salt, iterations, 64, "sha512")
-    .toString("hex");
+  let hash = crypto.pbkdf2Sync(password, salt, iterations, 64, "sha512").toString("hex");
 
   return [salt, hash].join("$");
 };
@@ -40,9 +37,7 @@ const hashPassword = (password) => {
 const verifyPassword = (password, storedPassword) => {
   const [salt, originalHash] = storedPassword.split("$"); // Split the stored password into salt and hash
   const iterations = 10000;
-  const verifyHash = crypto
-    .pbkdf2Sync(password, salt, iterations, 64, "sha512")
-    .toString("hex");
+  const verifyHash = crypto.pbkdf2Sync(password, salt, iterations, 64, "sha512").toString("hex");
 
   return originalHash === verifyHash; // If the hashes match, return true, else return false
 };
@@ -77,6 +72,20 @@ async function updateTimestamp(email) {
   return dbQueryPromise(sql, VALUES);
 }
 
+function convertToSQLDate(date) {
+    // Convert the string to a Date object
+    let dateObject = new Date(date);
+
+    // Format the Date object to YYYY-MM-DD
+    let year = dateObject.getFullYear();
+    let month = String(dateObject.getMonth() + 1).padStart(2, "0"); // Months are zero-based
+    let day = String(dateObject.getDate()).padStart(2, "0");
+  
+    let mysqlFormattedDate = `${year}-${month}-${day}`;
+
+    return mysqlFormattedDate;
+}
+
 /***************************************
  *  User Account Routes
  **************************************/
@@ -98,8 +107,7 @@ async function register(req, res) {
 
   // Attempt to register the user in the database
   try {
-    const sql =
-      "INSERT INTO users (firstname, lastname, email, password) VALUES (?, ?, ?, ?)";
+    const sql = "INSERT INTO users (firstname, lastname, email, password) VALUES (?, ?, ?, ?)";
     const VALUES = [firstName, lastName, email, hashedPassword];
 
     await dbQueryPromise(sql, VALUES);
@@ -135,9 +143,7 @@ async function login(req, res) {
     // If the password is invalid, return an error
     if (!passwordIsValid) {
       console.log("Invalid Credientials, please try again.");
-      return res
-        .status(401)
-        .json({ message: "Invalid Credientials, please try again." });
+      return res.status(401).json({ message: "Invalid Credientials, please try again." });
     }
 
     // Update the last login timestamp
@@ -149,13 +155,9 @@ async function login(req, res) {
     }
 
     // Generate a token
-    const token = jwt.sign(
-      { id: user[0].id, name: userName, email: user[0].email },
-      process.env.TOKEN_SECRET,
-      {
-        expiresIn: "1h",
-      }
-    );
+    const token = jwt.sign({ id: user[0].id, name: userName, email: user[0].email }, process.env.TOKEN_SECRET, {
+      expiresIn: "1h",
+    });
 
     // Return the data to the client
     res
@@ -208,12 +210,7 @@ async function changePassword(req, res) {
 
   try {
     await dbQueryPromise(sql, VALUES);
-    console.log(
-      "Password has been changed successfully for user: " +
-        decoded.email +
-        " at: " +
-        new Date()
-    );
+    console.log("Password has been changed successfully for user: " + decoded.email + " at: " + new Date());
     res.status(200).json({ message: "Password has been changed successfully" });
   } catch (error) {
     console.error(messages.dbconnectError, error);
@@ -240,16 +237,7 @@ async function addDevice(req, res) {
   const { device_id, device_name } = req.body;
 
   //log
-  console.log(
-    "Device ID: " +
-      device_id +
-      " Device Name: " +
-      device_name +
-      " User ID: " +
-      user_id +
-      " User Email: " +
-      user_email
-  );
+  console.log("Device ID: " + device_id + " Device Name: " + device_name + " User ID: " + user_id + " User Email: " + user_email);
 
   // Check if the device exists in the database
   const deviceExists = await sensorController.checkdeviceID(device_id);
@@ -263,15 +251,12 @@ async function addDevice(req, res) {
   }
 
   // Associate the device with the user in the user_device table
-  const sql =
-    "INSERT INTO user_device (user_id, device_id, device_name, user_email) VALUES (?, ?, ?, ?)";
+  const sql = "INSERT INTO user_device (user_id, device_id, device_name, user_email) VALUES (?, ?, ?, ?)";
   const VALUES = [user_email, device_id, device_name, user_email];
 
   try {
     await dbQueryPromise(sql, VALUES);
-    res
-      .status(201)
-      .json({ message: "Device has been registered successfully" });
+    res.status(201).json({ message: "Device has been registered successfully" });
   } catch (error) {
     console.error(messages.dbconnectError, error);
     res.status(500).json({ message: messages.dbconnectError });
@@ -346,11 +331,7 @@ async function addGarden(req, res) {
   // Add the garden to the Database
   try {
     const sql = "INSERT INTO gardens (name, location, type) VALUES (?, ?, ?)";
-    const VALUES = [
-      gardenData.gardenName,
-      gardenData.gardenLocation,
-      gardenData.gardenType,
-    ];
+    const VALUES = [gardenData.gardenName, gardenData.gardenLocation, gardenData.gardenType];
 
     const result = await dbQueryPromise(sql, VALUES);
     console.log("Garden Added Successfully");
@@ -358,14 +339,8 @@ async function addGarden(req, res) {
     const gardenID = result.insertId;
 
     // Associate the garden with the user in the user_garden table
-    const sql2 =
-      "INSERT INTO user_gardens (user_id, garden_id, ownership, user_permissions) VALUES (?, ?, ?, ?)";
-    const VALUES2 = [
-      userID,
-      gardenID,
-      gardenData.ownership,
-      gardenData.permissions,
-    ];
+    const sql2 = "INSERT INTO user_gardens (user_id, garden_id, ownership, user_permissions) VALUES (?, ?, ?, ?)";
+    const VALUES2 = [userID, gardenID, gardenData.ownership, gardenData.permissions];
 
     await dbQueryPromise(sql2, VALUES2);
     console.log("Garden Associated with User Successfully");
@@ -399,13 +374,7 @@ async function addGardenGroup(req, res) {
 
     // Associate the group with the garden in the garden_groups table
     const SQL2 = `INSERT INTO user_groups (group_id, garden_id, user_id, ownership, user_permissions) VALUES (?, ?, ?, ?, ?)`;
-    const VALUES2 = [
-      groupID,
-      groupData.gardenID,
-      userID,
-      groupData.ownership,
-      groupData.permissions,
-    ];
+    const VALUES2 = [groupID, groupData.gardenID, userID, groupData.ownership, groupData.permissions];
     const result2 = await dbQueryPromise(SQL2, VALUES2);
 
     if (result && result2) {
@@ -421,9 +390,7 @@ async function addGardenPlant(req, res) {
   const userID = req.params.userID;
   const data = req.body;
 
-  const defaultPlantName = data.variety_name
-    ? data.variety_name
-    : data.plant_name;
+  const defaultPlantName = data.variety_name ? data.variety_name : data.plant_name;
 
   const plantData = {
     plantID: data.plant_id,
@@ -439,15 +406,8 @@ async function addGardenPlant(req, res) {
 
   try {
     // Add the plant to the Database
-    const SQL =
-      "INSERT INTO garden_plants (customName, plant_id, variety_id, growth_stage, start_date) VALUES (?,?,?,?,?)";
-    const VALUES = [
-      plantData.plantFriendlyName,
-      plantData.plantID,
-      plantData.varietyID,
-      plantData.growthStage,
-      plantData.startDate,
-    ];
+    const SQL = "INSERT INTO garden_plants (customName, plant_id, variety_id, growth_stage, start_date) VALUES (?,?,?,?,?)";
+    const VALUES = [plantData.plantFriendlyName, plantData.plantID, plantData.varietyID, plantData.growthStage, plantData.startDate];
     const result = await dbQueryPromise(SQL, VALUES);
     const gardenPlantID = result.insertId;
 
@@ -455,14 +415,7 @@ async function addGardenPlant(req, res) {
 
     // // Associate the plant with the garden in the garden_plants table
     const SQL2 = `INSERT INTO user_plants (user_id, garden_id, group_id, gardenPlant_id, ownership, user_permissions) VALUES (?, ?, ?, ?, ?, ?)`;
-    const VALUES2 = [
-      userID,
-      plantData.gardenID,
-      plantData.groupID,
-      gardenPlantID,
-      plantData.ownership,
-      plantData.permissions,
-    ];
+    const VALUES2 = [userID, plantData.gardenID, plantData.groupID, gardenPlantID, plantData.ownership, plantData.permissions];
     const result2 = await dbQueryPromise(SQL2, VALUES2);
 
     console.log("Plant Associated with User Successfully");
@@ -642,19 +595,12 @@ async function deleteGardenGroup(req, res) {
   const deleteFromGardenGroups_values = [groupID];
 
   // Delete the group from the user_groups table
-  const deleteFromUserGroups =
-    "DELETE FROM user_groups WHERE user_id = ? AND group_id = ?";
+  const deleteFromUserGroups = "DELETE FROM user_groups WHERE user_id = ? AND group_id = ?";
   const deleteFromUserGroups_values = [userID, groupID];
 
   try {
-    await dbQueryPromise(
-      deleteFromUserGroups,
-      deleteFromUserGroups_values
-    ).then(async () => {
-      await dbQueryPromise(
-        deleteFromGardenGroups,
-        deleteFromGardenGroups_values
-      );
+    await dbQueryPromise(deleteFromUserGroups, deleteFromUserGroups_values).then(async () => {
+      await dbQueryPromise(deleteFromGardenGroups, deleteFromGardenGroups_values);
       console.log("Group Removed from User Successfully");
     });
 
@@ -680,19 +626,12 @@ async function deleteGardenPlant(req, res) {
   const deleteFromGardenPlants_values = [gardenPlantID];
 
   // Delete the plant from the user_plants table
-  const deleteFromUserPlants =
-    "DELETE FROM user_plants WHERE user_id = ? AND gardenPlant_id = ?";
+  const deleteFromUserPlants = "DELETE FROM user_plants WHERE user_id = ? AND gardenPlant_id = ?";
   const deleteFromUserPlants_values = [userID, gardenPlantID];
 
   try {
-    await dbQueryPromise(
-      deleteFromUserPlants,
-      deleteFromUserPlants_values
-    ).then(async () => {
-      await dbQueryPromise(
-        deleteFromGardenPlants,
-        deleteFromGardenPlants_values
-      );
+    await dbQueryPromise(deleteFromUserPlants, deleteFromUserPlants_values).then(async () => {
+      await dbQueryPromise(deleteFromGardenPlants, deleteFromGardenPlants_values);
       console.log("Plant Removed from garden_Plants Successfully");
     });
 
@@ -705,6 +644,56 @@ async function deleteGardenPlant(req, res) {
   }
 }
 
+//UPDATE
+async function updateGardenPlant(req, res) {
+  const userID = req.params.userID;
+  const gardenPlantID = req.params.gardenPlantID;
+  const data = req.body;
+
+  let property = data.property;
+  let formattedData = data.formData;
+
+
+
+  //Temporary fix for the property name not matching db name for some properties
+  // Convert property name to match the database column name
+  switch (property) {
+    case "lastWatering":
+      property = "last_watering";
+      formattedData = convertToSQLDate(formattedData);
+      break;
+    case "lastFeeding":
+      property = "last_feeding";
+      formattedData = convertToSQLDate(formattedData);
+      break;
+    case "growthStage":
+      property = "growth_stage";
+      break;
+    case "startDate":
+      property = "start_date";
+      formattedData = convertToSQLDate(formattedData);
+      break;
+  }
+
+  if (!userID || !gardenPlantID) {
+    console.error("Invalid Request Parameters");
+    return res.status(400).json({ message: "Invalid Request Parameters" });
+  }
+
+  // Update the plant in the garden_plants table
+  const updateGardenPlant = `UPDATE garden_plants SET ${property} = ? WHERE id = ?`;
+  const updateGardenPlant_values = [formattedData, gardenPlantID];
+
+  try {
+    await dbQueryPromise(updateGardenPlant, updateGardenPlant_values);
+    console.log("Plant Updated Successfully");
+
+    return res.status(200).json({ message: "Plant Updated Successfully" });
+  } catch (error) {
+    console.error(messages.dbconnectError, error);
+    return res.status(500).json({ message: messages.dbconnectError });
+  }
+}
 /***************************************
  *  Protected Route handler
  **************************************/
@@ -723,9 +712,7 @@ async function protectedRoute(req, res) {
  * ************************************/
 function verifyToken(req, res, next) {
   // Get the token from the request headers
-  let token = req.headers.authorization
-    ? req.headers.authorization.split(" ")[1]
-    : null;
+  let token = req.headers.authorization ? req.headers.authorization.split(" ")[1] : null;
 
   // If the token is not provided, return an error
   if (!token) {
@@ -744,24 +731,16 @@ function verifyToken(req, res, next) {
 
         //If the token has been expired for more then 7 days, return an error
         if (currentTime - expiredTime > 604800) {
-          return res
-            .status(401)
-            .json({ message: "Your session has ended, Please Log in again" });
+          return res.status(401).json({ message: "Your session has ended, Please Log in again" });
         }
 
         // Otherwise Generate a new token and return it to the client
-        const newToken = jwt.sign(
-          { id: tokenData.id, name: tokenData.name, email: tokenData.email },
-          process.env.TOKEN_SECRET,
-          {
-            expiresIn: "24h",
-          }
-        );
+        const newToken = jwt.sign({ id: tokenData.id, name: tokenData.name, email: tokenData.email }, process.env.TOKEN_SECRET, {
+          expiresIn: "24h",
+        });
         token = newToken; // Update the token with the new token
 
-        console.log(
-          "Token Expired for user: " + tokenData.email + ", New Token Generated"
-        );
+        console.log("Token Expired for user: " + tokenData.email + ", New Token Generated");
       } else {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -778,10 +757,7 @@ function verifyToken(req, res, next) {
 
 //Generate a function to create a permenant JWT Token for Testing
 function generateDebugToken() {
-  const token = jwt.sign(
-    { id: 1, name: "Test User", email: "test@gardenguardian.app" },
-    process.env.TOKEN_SECRET
-  );
+  const token = jwt.sign({ id: 1, name: "Test User", email: "test@gardenguardian.app" }, process.env.TOKEN_SECRET);
 
   console.log("Debug Token: " + token);
 
@@ -810,6 +786,8 @@ module.exports = {
   addGardenPlant,
   getGardenPlants,
   deleteGardenPlant,
+
+  updateGardenPlant,
 
   protectedRoute,
   verifyToken,
