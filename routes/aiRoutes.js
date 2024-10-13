@@ -1,19 +1,20 @@
 /***************************************
  *  AI Routes
- * 
+ *
  *  This file contains the routes for the AI Controller
  * ************************************/
 
-
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const aiController = require('../controllers/aiController');
+const aiController = require("../controllers/aiController");
 
 // Route to get the description of a plant
-router.get('/plants/:plant', aiController.generatePlantDescription);
+router.get("/plants/:plant", aiController.generatePlantDescription);
 
 //Route to Generate the Information for user Added Plants
-router.post('/generatePlantInfo', aiController.generatePlantInfo);
+router.post("/generatePlantInfo", aiController.generatePlantInfo);
 
+//Route for user to Chat with the AI
+router.post("/:userid/root", aiController.chatWithRootAI);
 
 module.exports = router;
