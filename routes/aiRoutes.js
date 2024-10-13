@@ -14,7 +14,6 @@ router.get("/plants/:plant", aiController.generatePlantDescription);
 //Route to Generate the Information for user Added Plants
 router.post("/generatePlantInfo", aiController.generatePlantInfo);
 
-//Route for user to Chat with the AI
-router.post("/:userid/root", aiController.chatWithRootAI);
+
 
 module.exports = router;
