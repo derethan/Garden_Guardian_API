@@ -8,6 +8,17 @@ const https = require('https');
 const express = require('express');
 const app = express();
 
+// Enable session management
+const session = require('express-session');
+
+// Enable the use of cookies
+app.use(session({
+  secret: `${process.env.SESSION_SECRET}`,
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } // Set to true if using HTTPS
+}));
+
 // Configure dotenv
 const dotenv = require('dotenv');
 dotenv.config({ path: './.env' });

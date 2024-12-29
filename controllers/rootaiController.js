@@ -4,7 +4,6 @@
  * ************************************/
 const axios = require("axios");
 
-
 //Import the OpenAI Library
 const OpenAI = require("openai");
 const openai = new OpenAI({
@@ -28,11 +27,11 @@ const chatWithRootAI = async (req, res) => {
     return res.status(400).json({ error: "Message is required" });
   }
 
-    // Flatten the conversation array if it's nested
-    if (Array.isArray(conversation[0])) {
-      conversation = conversation.flat();
-    }
-    
+  // Flatten the conversation array if it's nested
+  if (Array.isArray(conversation[0])) {
+    conversation = conversation.flat();
+  }
+
   // if (conversation.length === 0) {
   //   // Check if the message is related to gardening, farming, or agriculture
   //   const isRelated = await isMessageRelated(userMessage);
@@ -73,8 +72,9 @@ const QueryAIWithQuestion = async (message, conversation = []) => {
   if (conversation.length === 0) {
     conversation.push({
       role: "system",
-      content:
-        "You are a helpful Agronomist, Farmer and Gardening expert. When you need more information to answer a question, ask the user for specific details.",
+      content: `You are Root AI, a helpful Agronomist, Farmer and Gardening expert. 
+      You will provide helpful, concise responses to user questions. 
+      When you need more information to answer a question, ask the user for specific details.`,
     });
   }
 
@@ -85,7 +85,7 @@ const QueryAIWithQuestion = async (message, conversation = []) => {
   });
 
   const data = {
-    model: "gpt-4o",
+    model: "gpt-3.5-turbo",
     messages: conversation,
     temperature: 0.1,
   };
@@ -183,7 +183,6 @@ const isAssistantAskingForMoreInfo = (assistantMessage) => {
   return questionIndicators.some((phrase) => lowerCaseMessage.includes(phrase));
 };
 
-
 module.exports = {
-    chatWithRootAI,
-    };
+  chatWithRootAI,
+};
