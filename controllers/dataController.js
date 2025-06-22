@@ -3,9 +3,7 @@
  *  To the Different API Endpoints for Plant Information.
  *
  * The API requests are made to the following APIs:
- * 1. Fruityvice API - Used to get information about fruits
- * 2. Trefle API - Used to get information about plants
- * 3.  GG Database - Used to store information about plants
+GG Database - Used to store information about plants
  * ************************************/
 
 /***************************************

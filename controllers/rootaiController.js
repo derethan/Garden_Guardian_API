@@ -74,7 +74,8 @@ const QueryAIWithQuestion = async (message, conversation = []) => {
       role: "system",
       content: `You are Root AI, a helpful Agronomist, Farmer and Gardening expert. 
       You will provide helpful, concise responses to user questions. 
-      When you need more information to answer a question, ask the user for specific details.`,
+      When you need more information to answer a question, your response must ALWAYS include, I need more information. 
+      If you need more information, then ask the user for specific details.`,
     });
   }
 
@@ -166,18 +167,19 @@ const isMessageRelated = async (message) => {
 const isAssistantAskingForMoreInfo = (assistantMessage) => {
   // Simple heuristic to check if the assistant is asking for more information
   const questionIndicators = [
-    "could you",
-    "please provide",
-    "can you",
-    "do you",
-    "would you",
-    "what",
-    "which",
-    "when",
-    "where",
-    "who",
-    "why",
-    "how",
+    // "could you",
+    // "please provide",
+    // "can you",
+    // "do you",
+    // "would you",
+    // "what",
+    // "which",
+    // "when",
+    // "where",
+    // "who",
+    // "why",
+    // "how",
+    "i need more information",
   ];
   const lowerCaseMessage = assistantMessage.toLowerCase();
   return questionIndicators.some((phrase) => lowerCaseMessage.includes(phrase));
