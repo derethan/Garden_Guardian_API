@@ -54,11 +54,11 @@ app.use('/rootai', rootaiRoutes);
 
 // Your routes and middleware setup
 app.get('/', (req, res) => {
-  res.send('Hello, I am the API server!');
+  res.send('Guarden Guardian API server!');
 });
 
 
-// // SSL options
+// SSL options
 // const sslOptions = {
 //   key: fs.readFileSync('./sslcert/ggssl.key', 'utf8'),
 //   cert: fs.readFileSync('./sslcert/63be74e1b51ba86b.crt', 'utf8'),
