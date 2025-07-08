@@ -249,7 +249,7 @@ async function storeSensorData(req, res) {
   const DeviceID = responseData.deviceId;
   const sensorName = responseData.sensorId;
   const sensorType = responseData.sensorType;
-  const sensorStatus = responseData.sensorStatus || "400"; // Default to "400" if not provided
+  const sensorStatus = responseData.status || "400"; // Default to "400" if not provided
   const unit = responseData.unit || "unknown"; // Default to "unknown" if not provided
   const sensorValues = responseData.values || []; // Array of sensor values
   const readTime = responseData.timestamp || currentTime; // Default to current time if not provided
@@ -326,7 +326,7 @@ function validateSensorData(responseData) {
   }
 
   // Validate required fields based on the sample structure
-  const requiredFields = ["deviceId", "sensorId", "sensorType", "timestamp", "values"];
+  const requiredFields = ["deviceId", "sensorId", "sensorType", "timestamp", "values", "status", "unit"];
   const missingFields = requiredFields.filter((field) => !(field in responseData));
 
   if (missingFields.length > 0) {
@@ -376,6 +376,20 @@ function validateSensorData(responseData) {
     if (typeof responseData.timestamp !== "number" || responseData.timestamp <= 0) {
       console.log("Error: Invalid timestamp - must be a positive number");
       errors.push("Invalid timestamp - must be a positive number");
+    }
+  }
+
+  if (responseData.status !== undefined) {
+    if (typeof responseData.status !== "number") {
+      console.log("Error: Invalid status - must be a number");
+      errors.push("Invalid status - must be a number");
+    }
+  }
+
+  if (responseData.unit !== undefined) {
+    if (typeof responseData.unit !== "string") {
+      console.log("Error: Invalid unit - must be a string");
+      errors.push("Invalid unit - must be a string");
     }
   }
 
