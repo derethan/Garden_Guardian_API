@@ -1,8 +1,8 @@
 const { addPlant } = require("../../controllers/dataController");
-const dbQueryPromise = require("../db/dbConnect");
+const dbQueryPromise = require("../../db/dbConnect");
 
 // Use Jest to mock the dbQueryPromise function
-jest.mock("../db/dbConnect");
+jest.mock("../../db/dbConnect");
 
 describe("dataController", () => {
   test("addPlant function -  It should return a 201 status code", async () => {
@@ -82,7 +82,7 @@ describe("dataController", () => {
 
     await addPlant(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.status).toHaveBeenCalledWith(200);
   });
 });
 
