@@ -38,24 +38,23 @@ const addPlant = async (req, res) => {
   // useCase: Used when a plant is added without a variety, prevent duplicate plants
   if (plantExists && !variety) {
     console.log("Plant already exists in the database");
-    return res.status(201).json({ error: `Oops! This Plant has already been added` });
+    return res.status(200).json({ error: `Oops! This Plant has already been added` });
   }
 
   // Handle the case where the plant does not exist in the database
-
-  // NOTE: Plant Generation may need to handle the case where the AI does not return any information
-  // It should Return an error for this before attempting to add the plant to the database
-  // But, in the event that doesnt work as intended it may need to be handled here as well
-
   if (!plantExists) {
     // If Variety is not provided, use generated plant info for Main plant species from client
     if (!variety) {
       console.log("Variety not provided, adding Only the plant to the database");
-
-      // If the Plant is added to the database, return a success message
-      if (addPlantToDB(plant, properties)) {
+      try {
+        await addPlantToDB(plant, properties);
         console.log("Plant added to the database");
         return res.status(200).json({ message: "Plant added to the database" });
+      } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+          error: "Server Connection Error: Failed to add plant to the the Database",
+        });
       }
     }
 
@@ -71,9 +70,14 @@ const addPlant = async (req, res) => {
         return { title: key, value: value };
       });
 
-      // If the Plant is added to the database, return a success message
-      if (addPlantToDB(plant, convertedPlantInfo)) {
+      try {
+        await addPlantToDB(plant, convertedPlantInfo);
         console.log("Plant added to the database");
+      } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+          error: "Server Connection Error: Failed to add plant to the the Database",
+        });
       }
     }
   }
@@ -87,14 +91,20 @@ const addPlant = async (req, res) => {
 
   if (varietyExists && variety) {
     console.log("Variety already exists in the database");
-    return res.status(201).json({ error: `Oops! This Variety of ${plant} has already been added` });
+    return res.status(200).json({ error: `Oops! This Variety of ${plant} has already been added` });
   }
 
   // If the Variety does not exist in the database, add it
   if (!varietyExists && variety) {
-    if (addVarietyToDB(plant, variety, properties)) {
+    try {
+      await addVarietyToDB(plant, variety, properties);
       console.log("Variety added to the database");
       res.status(200).json({ message: "Variety added to the database" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        error: "Server Connection Error: Failed to add variety to the the Database",
+      });
     }
   }
 };
@@ -181,6 +191,25 @@ const getVarietyDetails = async (req, res) => {
     return res.status(500).json({
       error: "Server Connection Error: Failed to fetch data from the the Database",
     });
+  }
+};
+
+const getTaggedPlant = async (req, res) => {
+  const tagId = req.params.tagId;
+  const sql = "SELECT plant_id FROM tag_mappings WHERE tag_id = ?";
+  const values = [tagId];
+
+  try {
+    const response = await dbQueryPromise(sql, values);
+
+    if (response.length === 0) {
+      return res.status(404).json({ error: "Tag not found" });
+    }
+
+    res.status(200).json({ plantId: response[0].plant_id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server Connection Error: Failed to fetch data from the the Database" });
   }
 };
 
@@ -274,9 +303,7 @@ const addPlantToDB = async (plant, properties) => {
     return true;
   } catch (error) {
     console.error(error);
-    res.status(500).json({
-      error: "Server Connection Error: Failed to add plant to the the Database",
-    });
+    throw error;
   }
 };
 
@@ -296,9 +323,7 @@ const addVarietyToDB = async (plant, variety, properties) => {
     return true;
   } catch (error) {
     console.error(error);
-    res.status(500).json({
-      error: "Server Connection Error: Failed to add plant to the the Database",
-    });
+    throw error;
   }
 };
 
@@ -310,4 +335,5 @@ module.exports = {
   addPlant,
   queryPlantDetails,
   updatePlantDescription,
+  getTaggedPlant,
 };

@@ -37,6 +37,7 @@ const sensorRoutes = require('./routes/sensorRoutes');
 const dataRoutes = require('./routes/dataRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const rootaiRoutes = require('./routes/rootaiRoutes');
+const tagRoutes = require('./routes/tagRoutes');
 
 // Add headers
 app.use((req, res, next) => {
@@ -51,6 +52,7 @@ app.use('/sensors', sensorRoutes);
 app.use('/api', dataRoutes);
 app.use('/ai', aiRoutes);
 app.use('/rootai', rootaiRoutes);
+app.use('/api', tagRoutes);
 
 // Your routes and middleware setup
 app.get('/', (req, res) => {
