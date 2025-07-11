@@ -2,6 +2,16 @@
  *  User Controller
  * ************************************/
 
+import { Request, Response } from "express";
+
+// Extend Request interface to include custom properties
+interface CustomRequest extends Request {
+  userId?: number;
+  userName?: string;
+  userEmail?: string;
+  token?: string;
+}
+
 const jwt = require("jsonwebtoken");
 
 const sensorController = require("./sensorController");
@@ -25,7 +35,7 @@ const dbQueryPromise = require("../db/dbConnect");
 const crypto = require("crypto");
 
 // Hash the supplied password
-const hashPassword = (password) => {
+const hashPassword = (password: string): string => {
   let salt = crypto.randomBytes(16).toString("hex");
   let iterations = 10000;
   let hash = crypto.pbkdf2Sync(password, salt, iterations, 64, "sha512").toString("hex");
@@ -34,7 +44,7 @@ const hashPassword = (password) => {
 };
 
 // Function to Verify a Supplied Password with a Stored Password from the User database
-const verifyPassword = (password, storedPassword) => {
+const verifyPassword = (password: string, storedPassword: string): boolean => {
   const [salt, originalHash] = storedPassword.split("$"); // Split the stored password into salt and hash
   const iterations = 10000;
   const verifyHash = crypto.pbkdf2Sync(password, salt, iterations, 64, "sha512").toString("hex");
@@ -47,7 +57,7 @@ const verifyPassword = (password, storedPassword) => {
  * ************************************/
 
 // Check if email already exists
-async function emailExists(email) {
+async function emailExists(email: string): Promise<boolean> {
   const sql = "SELECT * FROM users WHERE email = ?";
   const VALUES = [email];
 
@@ -57,7 +67,7 @@ async function emailExists(email) {
 }
 
 // Get user from the database
-async function getUser(email) {
+async function getUser(email: string): Promise<any> {
   const sql = "SELECT * FROM users WHERE email = ?";
   const VALUES = [email];
 
@@ -65,14 +75,14 @@ async function getUser(email) {
 }
 
 // Update the last login timestamp
-async function updateTimestamp(email) {
+async function updateTimestamp(email: string): Promise<void> {
   const sql = "UPDATE users SET last_login = NOW() WHERE email = ?";
   const VALUES = [email];
 
   return dbQueryPromise(sql, VALUES);
 }
 
-function convertToSQLDate(date) {
+function convertToSQLDate(date: Date): string {
     // Convert the string to a Date object
     let dateObject = new Date(date);
 
@@ -91,7 +101,7 @@ function convertToSQLDate(date) {
  **************************************/
 
 // Route for registering a new user
-async function register(req, res) {
+async function register(req: Request, res: Response): Promise<Response | void> {
   // Extract the request data
   const { firstName, lastName, email, password } = req.body;
 
@@ -121,7 +131,7 @@ async function register(req, res) {
 }
 
 // Route for logging in a user
-async function login(req, res) {
+async function login(req: Request, res: Response): Promise<Response | void> {
   const { email, password } = req.body;
 
   // If the email does not exist, return an error
@@ -180,9 +190,14 @@ async function login(req, res) {
 }
 
 // Route for Changing the user password
-async function changePassword(req, res) {
+async function changePassword(req: Request, res: Response): Promise<Response | void> {
   const { password, newPassword } = req.body;
   const tokenHeader = req.headers.authorization;
+  
+  if (!tokenHeader) {
+    return res.status(401).json({ message: "No token provided" });
+  }
+  
   const token = tokenHeader.split(" ")[1];
 
   //Decode Token to get the user information
@@ -223,9 +238,14 @@ async function changePassword(req, res) {
  **************************************/
 
 // Route for Adding a new device to the user account
-async function addDevice(req, res) {
+async function addDevice(req: Request, res: Response): Promise<Response | void> {
   //extract the headers
   const tokenHeader = req.headers.authorization;
+  
+  if (!tokenHeader) {
+    return res.status(401).json({ message: "No token provided" });
+  }
+  
   const token = tokenHeader.split(" ")[1];
 
   // extract the user email as user_id from the token
@@ -264,9 +284,14 @@ async function addDevice(req, res) {
 }
 
 // Route for checking if a user has a device associated with their account
-async function checkForDevice(req, res) {
+async function checkForDevice(req: Request, res: Response): Promise<Response | void> {
   //extract the headers
   const tokenHeader = req.headers.authorization;
+  
+  if (!tokenHeader) {
+    return res.status(401).json({ message: "No token provided" });
+  }
+  
   const token = tokenHeader.split(" ")[1];
 
   // extract the user email as user_id from the token
@@ -283,8 +308,8 @@ async function checkForDevice(req, res) {
 
     if (result.length > 0) {
       // Store the Device ID's associated with the account
-      const deviceIDs = [];
-      result.forEach((device) => {
+      const deviceIDs: Array<{device_id: any, device_name: any}> = [];
+      result.forEach((device: any) => {
         deviceIDs.push({
           device_id: device.device_id,
           device_name: device.device_name,
@@ -317,7 +342,7 @@ async function checkForDevice(req, res) {
 
 //CREATE
 //TODO: HANDLE Transactions for multiple queries
-async function addGarden(req, res) {
+async function addGarden(req: CustomRequest, res: Response): Promise<Response | void> {
   const userID = req.params.userID;
 
   const gardenData = {
@@ -351,7 +376,7 @@ async function addGarden(req, res) {
     return res.status(500).json({ message: messages.dbconnectError });
   }
 }
-async function addGardenGroup(req, res) {
+async function addGardenGroup(req: CustomRequest, res: Response): Promise<Response | void> {
   const userID = req.params.userID;
   const formData = req.body.formData;
 
@@ -386,7 +411,7 @@ async function addGardenGroup(req, res) {
     return res.status(500).json({ message: messages.dbconnectError });
   }
 }
-async function addGardenPlant(req, res) {
+async function addGardenPlant(req: CustomRequest, res: Response): Promise<Response | void> {
   const userID = req.params.userID;
   const data = req.body;
 
@@ -431,7 +456,7 @@ async function addGardenPlant(req, res) {
 }
 
 //READ
-async function getGardens(req, res) {
+async function getGardens(req: CustomRequest, res: Response): Promise<Response | void> {
   const userID = req.params.userID;
 
   // Get the gardens associated with the user
@@ -447,7 +472,7 @@ async function getGardens(req, res) {
     const result = await dbQueryPromise(sql, VALUES);
 
     //Restructure the Data to send to the client
-    const gardens = result.map((garden) => ({
+    const gardens = result.map((garden: any) => ({
       gardenName: garden.name,
       gardenLocation: garden.location,
       gardenType: garden.type,
@@ -463,7 +488,7 @@ async function getGardens(req, res) {
     return res.status(500).json({ message: messages.dbconnectError });
   }
 }
-async function getGardenGroups(req, res) {
+async function getGardenGroups(req: CustomRequest, res: Response): Promise<Response | void> {
   const userID = req.params.userID;
 
   // Query the Database for all groups in the garden_groups table associated with the user
@@ -479,7 +504,7 @@ async function getGardenGroups(req, res) {
     const result = await dbQueryPromise(sql, VALUES);
 
     //Restructure the Data to send to the client
-    const gardenGroups = result.map((group) => ({
+    const gardenGroups = result.map((group: any) => ({
       groupName: group.name,
       gardenID: group.garden_id,
       groupID: group.id,
@@ -494,7 +519,7 @@ async function getGardenGroups(req, res) {
     return res.status(500).json({ message: messages.dbconnectError });
   }
 }
-async function getGardenPlants(req, res) {
+async function getGardenPlants(req: CustomRequest, res: Response): Promise<Response | void> {
   const userID = req.params.userID;
 
   // Query the Database for all plants in the garden_plants table associated with the user in the user_plants table
@@ -525,7 +550,7 @@ async function getGardenPlants(req, res) {
     const result = await dbQueryPromise(sql, VALUES);
 
     //Restructure the Data to send to the client
-    const gardenPlants = result.map((plant) => ({
+    const gardenPlants = result.map((plant: any) => ({
       userID: userID,
       gardenID: plant.garden_id,
       groupID: plant.group_id,
@@ -561,7 +586,7 @@ async function getGardenPlants(req, res) {
 }
 
 //DELETE
-async function deleteGarden(req, res) {
+async function deleteGarden(req: CustomRequest, res: Response): Promise<Response | void> {
   const userID = req.params.userID;
   const gardenID = req.params.gardenID;
 
@@ -586,7 +611,7 @@ async function deleteGarden(req, res) {
     return res.status(500).json({ message: messages.dbconnectError });
   }
 }
-async function deleteGardenGroup(req, res) {
+async function deleteGardenGroup(req: CustomRequest, res: Response): Promise<Response | void> {
   const userID = req.params.userID;
   const groupID = req.params.groupID;
 
@@ -612,7 +637,7 @@ async function deleteGardenGroup(req, res) {
     return res.status(500).json({ message: messages.dbconnectError });
   }
 }
-async function deleteGardenPlant(req, res) {
+async function deleteGardenPlant(req: CustomRequest, res: Response): Promise<Response | void> {
   const userID = req.params.userID;
   const gardenPlantID = req.params.gardenPlantID;
 
@@ -645,7 +670,7 @@ async function deleteGardenPlant(req, res) {
 }
 
 //UPDATE
-async function updateGardenPlant(req, res) {
+async function updateGardenPlant(req: CustomRequest, res: Response): Promise<Response | void> {
   const userID = req.params.userID;
   const gardenPlantID = req.params.gardenPlantID;
   const data = req.body;
@@ -697,7 +722,7 @@ async function updateGardenPlant(req, res) {
 /***************************************
  *  Protected Route handler
  **************************************/
-async function protectedRoute(req, res) {
+async function protectedRoute(req: CustomRequest, res: Response): Promise<Response | void> {
   //Handle protected route functions here, decode token and determine authorization based on token data
 
   //Send the New Token to the client
@@ -710,7 +735,7 @@ async function protectedRoute(req, res) {
 /***************************************
  * Token Verification Route Middleware
  * ************************************/
-function verifyToken(req, res, next) {
+function verifyToken(req: CustomRequest, res: Response, next: any): Response | void {
   // Get the token from the request headers
   let token = req.headers.authorization ? req.headers.authorization.split(" ")[1] : null;
 
@@ -719,7 +744,7 @@ function verifyToken(req, res, next) {
     return res.status(403).json({ message: "Secure Route, No token provided" });
   }
   // Verify the token
-  jwt.verify(token, process.env.TOKEN_SECRET, (error, decoded) => {
+  jwt.verify(token, process.env.TOKEN_SECRET, (error: any, decoded: any) => {
     const tokenData = jwt.decode(token);
 
     if (error) {
@@ -749,7 +774,7 @@ function verifyToken(req, res, next) {
     req.userId = tokenData.id; // Add the user id to the request object
     req.userName = tokenData.name; // Add the user name to the request object
     req.userEmail = tokenData.email; // Add the user email to the request object
-    req.token = token; // Add the token to the request object
+    req.token = token || undefined; // Add the token to the request object
 
     next(); // Continue to the next middleware
   }); // End of jwt.verify
@@ -767,28 +792,22 @@ function generateDebugToken() {
 /***************************************
  *  Export the functions
  **************************************/
-module.exports = {
+export {
   register,
   login,
   changePassword,
-
   addDevice,
   checkForDevice,
-
   addGarden,
   getGardens,
   deleteGarden,
-
   addGardenGroup,
   getGardenGroups,
   deleteGardenGroup,
-
   addGardenPlant,
   getGardenPlants,
   deleteGardenPlant,
-
   updateGardenPlant,
-
   protectedRoute,
   verifyToken,
 };

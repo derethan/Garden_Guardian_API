@@ -1,49 +1,31 @@
-/***************************************
- *  This Controller is used to handle the
- *  API requests to the OpenAI API for Root AI Based Chat Queries
- * ************************************/
-const axios = require("axios");
+import { Request, Response } from 'express';
+import OpenAI from "openai";
+import axios from "axios";
 
-//Import the OpenAI Library
-const OpenAI = require("openai");
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const cache = {};
+const cache: { [key: string]: any } = {};
 
-/***************************************
- * ROUTE HANDLERS
- * ************************************/
+interface ChatMessage {
+  role: string;
+  content: string;
+}
 
-//Function to Initiate a Chat with Root AI
-const chatWithRootAI = async (req, res) => {
+const chatWithRootAI = async (req: Request, res: Response) => {
   console.log("Chat with Root AI");
-  const userMessage = req.body.message;
-  let conversation = req.body.conversation || [];
+  const userMessage: string = req.body.message;
+  let conversation: ChatMessage[] = req.body.conversation || [];
   console.log("conversation:", conversation);
 
   if (!userMessage) {
     return res.status(400).json({ error: "Message is required" });
   }
 
-  // Flatten the conversation array if it's nested
   if (Array.isArray(conversation[0])) {
-    conversation = conversation.flat();
+    conversation = conversation.flat() as ChatMessage[];
   }
-
-  // if (conversation.length === 0) {
-  //   // Check if the message is related to gardening, farming, or agriculture
-  //   const isRelated = await isMessageRelated(userMessage);
-  //   console.log("isMessageRelated result:", isRelated);
-
-  //   if (!isRelated) {
-  //     return res.status(200).json({
-  //       message:
-  //         "Sorry, I can only assist with gardening, farming, or agriculture-related questions.",
-  //     });
-  //   }
-  // }
 
   const result = await QueryAIWithQuestion(userMessage, conversation);
 
@@ -51,24 +33,17 @@ const chatWithRootAI = async (req, res) => {
     return res.status(500).json({ error: result.error });
   }
 
-  // Send back the assistant's message and the updated conversation
   return res.status(200).json({
     message: result.message,
     conversation: result.conversation,
     needsMoreInfo: result.needsMoreInfo,
   });
-}; // end of chatWithRootAI
+};
 
-/***************************************
- * HELPER FUNCTIONS
- * ************************************/
-
-//Function to Chat with the Root AI
-const QueryAIWithQuestion = async (message, conversation = []) => {
-  const url = process.env.AI_URL;
+const QueryAIWithQuestion = async (message: string, conversation: ChatMessage[] = []): Promise<{ message?: string; conversation?: ChatMessage[]; needsMoreInfo?: boolean; error?: string }> => {
+  const url: string = process.env.AI_URL as string;
   console.log("QueryAIWithQuestion called with message:", message);
 
-  // initialize the conversation if it's empty
   if (conversation.length === 0) {
     conversation.push({
       role: "system",
@@ -79,7 +54,6 @@ const QueryAIWithQuestion = async (message, conversation = []) => {
     });
   }
 
-  // Add the user's message to the conversation
   conversation.push({
     role: "user",
     content: message,
@@ -98,24 +72,22 @@ const QueryAIWithQuestion = async (message, conversation = []) => {
   try {
     console.log("Sending request to OpenAI with data:", data);
     const response = await axios.post(url, data, { headers: headers });
-    const responseMessage = response.data.choices[0].message.content.trim();
+    const responseMessage: string = response.data.choices[0].message.content.trim();
     console.log("Received response from OpenAI:", responseMessage);
 
-    // Add the AI's response to the conversation
     conversation.push({
       role: "assistant",
       content: responseMessage,
     });
 
-    //Check if the AI is asking for more information
-    const needsMoreInfo = isAssistantAskingForMoreInfo(responseMessage);
+    const needsMoreInfo: boolean = isAssistantAskingForMoreInfo(responseMessage);
 
     return {
       message: responseMessage,
       conversation: conversation,
       needsMoreInfo: needsMoreInfo,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error connecting to OpenAI API:", error);
     return {
       error: "Server Connection Error: Failed to connect to the OpenAI API",
@@ -123,13 +95,12 @@ const QueryAIWithQuestion = async (message, conversation = []) => {
   }
 };
 
-// Helper function to check if the message is related to gardening, farming, or agriculture
-const isMessageRelated = async (message) => {
-  const url = process.env.AI_URL;
+const isMessageRelated = async (message: string): Promise<boolean> => {
+  const url: string = process.env.AI_URL as string;
 
   console.log("isMessageRelated called with message:", message);
 
-  const messages = [
+  const messages: ChatMessage[] = [
     {
       role: "system",
       content:
@@ -154,37 +125,23 @@ const isMessageRelated = async (message) => {
   try {
     console.log("Sending request to OpenAI with data:", data);
     const response = await axios.post(url, data, { headers: headers });
-    const answer = response.data.choices[0].message.content.trim().toLowerCase();
+    const answer: string = response.data.choices[0].message.content.trim().toLowerCase();
     console.log("Received response from OpenAI:", answer);
     return answer === "yes";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error connecting to OpenAI API:");
-    return false; // Default to false if there's an error
+    return false;
   }
 };
 
-// Helper function to determine if the assistant is asking for more information
-const isAssistantAskingForMoreInfo = (assistantMessage) => {
-  // Simple heuristic to check if the assistant is asking for more information
-  const questionIndicators = [
-    // "could you",
-    // "please provide",
-    // "can you",
-    // "do you",
-    // "would you",
-    // "what",
-    // "which",
-    // "when",
-    // "where",
-    // "who",
-    // "why",
-    // "how",
+const isAssistantAskingForMoreInfo = (assistantMessage: string): boolean => {
+  const questionIndicators: string[] = [
     "i need more information",
   ];
-  const lowerCaseMessage = assistantMessage.toLowerCase();
+  const lowerCaseMessage: string = assistantMessage.toLowerCase();
   return questionIndicators.some((phrase) => lowerCaseMessage.includes(phrase));
 };
 
-module.exports = {
+export {
   chatWithRootAI,
 };
