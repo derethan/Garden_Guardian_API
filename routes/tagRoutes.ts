@@ -1,7 +1,8 @@
-const express = require('express');
-const router = express.Router();
-const dataController = require('../controllers/dataController');
+import { Router } from 'express';
+import { getTaggedPlant } from '../controllers/dataController';
 
-router.get('/tags/:tagId', dataController.getTaggedPlant);
+const router = Router();
 
-module.exports = router;
+router.get('/tags/:tagId', getTaggedPlant);
+
+export default router;

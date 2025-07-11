@@ -16,7 +16,7 @@ const db_con = MySQL.createPool({
   idleTimeout: 60000,
 });
 
-db_con.getConnection((err: MySQL.MysqlError | null, connection: MySQL.PoolConnection) => {
+db_con.getConnection((err: any, connection: MySQL.PoolConnection) => {
   if (err) {
     console.error("Error connecting to database: " + err.message);
     return;
@@ -26,6 +26,6 @@ db_con.getConnection((err: MySQL.MysqlError | null, connection: MySQL.PoolConnec
   }
 });
 
-const dbQueryPromise = util.promisify(db_con.query).bind(db_con);
+const dbQueryPromise = util.promisify(db_con.query).bind(db_con) as unknown as (sql: string, values?: any[]) => Promise<any>;
 
 export default dbQueryPromise;

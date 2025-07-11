@@ -41,32 +41,31 @@ const generatePlantDescription = async (req: Request, res: Response) => {
     Authorization: "Bearer " + process.env.OPENAI_API_KEY,
   };
 
-  let responseMessage: string;
+  let responseMessage: string = "";
 
   try {
     const response = await axios.post(url, data, { headers: headers });
     responseMessage = response.data.choices[0].message.content;
     res.status(200).json(responseMessage);
+    
+    // Only process plant description if we got a valid response
+    const { queryPlantDetails, updatePlantDescription } = require("./dataController");
+    const plantDetails = await queryPlantDetails(plant);
+    const plantDesc: string | null = plantDetails[0] ? plantDetails[0].description : null;
+
+    if (!plantDesc && responseMessage) {
+      updatePlantDescription(plant, responseMessage).then((response: any) => {
+        if (response) {
+          console.log("Plant Description Added Successfully");
+        } else {
+          console.log("Failed to add Plant Description");
+        }
+      });
+    }
   } catch (error: any) {
     console.error(error);
     res.status(500).json({
       error: "Server Connection Error: Failed to connect to the OpenAI API",
-    });
-  }
-
-  const { queryPlantDetails, updatePlantDescription } = require("./dataController");
-
-  const plantDetails = await queryPlantDetails(plant);
-
-  const plantDesc: string | null = plantDetails[0] ? plantDetails[0].description : null;
-
-  if (!plantDesc) {
-    updatePlantDescription(plant, responseMessage).then((response: any) => {
-      if (response) {
-        console.log("Plant Description Added Successfully");
-      } else {
-        console.log("Failed to add Plant Description");
-      }
     });
   }
 };
@@ -132,7 +131,11 @@ const queryAIForPlantInfo = async (plant: string | null, variety: string | null,
     response_format: { type: "json_object" },
   });
 
-  const responseInfo = JSON.parse(completion.choices[0].message.content);
+  const content = completion.choices[0].message.content;
+  if (!content) {
+    throw new Error("No content received from OpenAI API");
+  }
+  const responseInfo = JSON.parse(content);
   return responseInfo;
 };
 

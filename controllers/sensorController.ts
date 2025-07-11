@@ -164,7 +164,11 @@ async function storeSensorData(req: Request, res: Response) {
   const validation: ValidationResult = validateSensorData(responseData);
 
   if (!validation.isValid) {
-    const errorResponse = {
+    const errorResponse: {
+      message: string;
+      errors: string[];
+      missingFields?: any;
+    } = {
       message: "Invalid sensor data",
       errors: validation.errors,
     };
@@ -194,7 +198,7 @@ async function storeSensorData(req: Request, res: Response) {
       .tag("deviceName", DeviceID)
       .tag("sensor", sensorName)
       .tag("sensorType", sensorType)
-      .tag("sensorStatus", sensorStatus)
+      .tag("sensorStatus", String(sensorStatus))
       .tag("unit", unit);
 
     if (sensorValues.length === 1) {
@@ -205,7 +209,8 @@ async function storeSensorData(req: Request, res: Response) {
       });
     }
 
-    point.timestamp(readTime > 1000000 ? readTime : currentTime);
+    const timestamp = typeof readTime === 'number' && readTime > 1000000 ? readTime : currentTime;
+    point.timestamp(timestamp);
 
     writeDataToInfluxDB(point).then((result: any) => {
       if (!result) {
@@ -275,14 +280,14 @@ function validateSensorData(responseData: SensorData): ValidationResult {
     if (!Array.isArray(responseData.values) || responseData.values.length === 0) {
       console.log("Error: Invalid values - must be a non-empty array");
       errors.push("Invalid values - must be a non-empty array");
-    }
-  } else {
-    const invalidValues: number[] = responseData.values.filter(
-      (value) => typeof value !== "number" || isNaN(value)
-    );
-    if (invalidValues.length > 0) {
-      console.log("Error: Invalid sensor values - all values must be numbers:", invalidValues);
-      errors.push("Invalid sensor values - all values must be numbers");
+    } else {
+      const invalidValues: any[] = responseData.values.filter(
+        (value: any) => typeof value !== "number" || isNaN(value)
+      );
+      if (invalidValues.length > 0) {
+        console.log("Error: Invalid sensor values - all values must be numbers:", invalidValues);
+        errors.push("Invalid sensor values - all values must be numbers");
+      }
     }
   }
 
