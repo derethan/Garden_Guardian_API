@@ -4,10 +4,7 @@
  * ************************************/
 
 //import the InfluxConnection
-const {
-  writeDataToInfluxDB,
-  readDataFromInfluxDB,
-} = require("../db/influxConnect");
+const { writeDataToInfluxDB, readDataFromInfluxDB } = require("../db/influxConnect");
 const { Point } = require("@influxdata/influxdb-client");
 
 /***************************************
@@ -21,15 +18,31 @@ const dbQueryPromise = require("../db/dbConnect"); // Import dbconnect.js
  * ************************************/
 async function testconnection(req, res) {
   try {
+    // log the full request
+    console.log("Test Connection Request Received");
+    // console.log("Request Headers:", req.headers);
+    // console.log("Request Query:", req.query);
+
     // Get the device ID from the route
     let deviceID = req.query.deviceID;
+
+    // log the deviceID
+    console.log("Device ID:", deviceID);
+
+    // Validate deviceID
+    if (!deviceID || deviceID.trim() === "") {
+      return res.status(400).json({ message: "Device ID is required" });
+    }
 
     // Check if the device exists in the database
     const deviceExists = await checkdeviceID(deviceID);
 
+    // Log the device existence check
+    console.log("Device Exists:", deviceExists);
+
     // If the device does not exist, add it to the database
     if (!deviceExists) {
-      const result = addDevice(deviceID);
+      const result = await addDevice(deviceID);
       if (result) {
         console.log(deviceID + " added to the database");
       } else {
@@ -37,14 +50,17 @@ async function testconnection(req, res) {
       }
     }
 
-    res
-      .status(201)
-      .json({ message: "Connection to the GardenGuardian Network succesfull" });
+    // Update the device ping in the database
+    const pingUpdated = await updateDevicePing(deviceID);
+    if (!pingUpdated) {
+      console.log("Failed to update device ping");
+      return res.status(500).json({ message: "Failed to update device ping" });
+    }
+
+    res.status(200).json({ message: "API connection status: OK. Device communication verified." });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ message: "There was an error communication with the server" });
+    res.status(500).json({ message: "There was an error communication with the server" });
   }
 }
 
@@ -75,16 +91,13 @@ async function addDevice(deviceID) {
 }
 
 /***************************************
- * Route handler to update the device status
+ * Helper Function to update the device status
+ *
  * ************************************/
-async function updateDevicePing(req, res) {
+async function updateDevicePing(deviceID) {
   try {
-    const deviceID = req.query.deviceID;
-    console.log("Ping Recieved From ", deviceID);
-
     // Update the latest ping timestamp
-    const sql =
-      "UPDATE devices SET last_ping = CURRENT_TIMESTAMP WHERE device_id = ?";
+    const sql = "UPDATE devices SET last_ping = CURRENT_TIMESTAMP WHERE device_id = ?";
     const VALUES = [deviceID];
 
     const result = await dbQueryPromise(sql, VALUES);
@@ -93,14 +106,11 @@ async function updateDevicePing(req, res) {
       console.log("Failed to update the last ping timestamp");
     }
 
-    res
-      .status(201)
-      .json({ message: "Ping Recieved and Device Status Updated" });
+    console.log("Device ping updated successfully");
+    return true;
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ message: "There was an error communication with the server" });
+    return false;
   }
 }
 
@@ -146,9 +156,7 @@ async function getDeviceStatus(req, res) {
     }
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ message: "There was an error communication with the Database" });
+    res.status(500).json({ message: "There was an error communication with the Database" });
   }
 }
 
@@ -187,7 +195,7 @@ async function getSensorStatus(req, res) {
       } else {
         status = "Online";
       }
-      
+
       sensorData.push({
         sensor: sensor._measurement,
         sensorStatus: status,
@@ -197,9 +205,7 @@ async function getSensorStatus(req, res) {
     res.status(200).json(sensorData);
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ message: "There was an error communication with the server" });
+    res.status(500).json({ message: "There was an error communication with the server" });
   }
 }
 
@@ -208,85 +214,190 @@ async function getSensorStatus(req, res) {
  * sensor Data from Garden Gardian Device
  * ************************************/
 async function storeSensorData(req, res) {
-  // Implement sensor data storage logic, e.g., write data to the database.
-
   //Store data from post request
   const responseData = req.body;
 
+  // log the full request
+  console.log("Test Connection Request Received");
+  console.log("Response Data:", responseData);
+
+  // Validate the sensor data using the helper function
+  const validation = validateSensorData(responseData);
+
+  if (!validation.isValid) {
+    const errorResponse = {
+      message: "Invalid sensor data",
+      errors: validation.errors,
+    };
+
+    // Add missing fields to response if they exist
+    if (validation.missingFields) {
+      errorResponse.missingFields = validation.missingFields;
+    }
+
+    return res.status(400).json(errorResponse);
+  }
+
+  // // Log the received data after validation
+  // console.log("Sensor Data Received and Validated:");
+  // console.log(JSON.stringify(responseData, null, 2));
+
+  //Get the current time
+  const currentTime = new Date();
+
   //Loop through the data and destructure it for Database Storage
-  responseData.Data.forEach((reading) => {
-    const DeviceID = reading.Device.DeviceID;
+  const DeviceID = responseData.deviceId;
+  const sensorName = responseData.sensorId;
+  const sensorType = responseData.sensorType;
+  const sensorStatus = responseData.status || "400"; // Default to "400" if not provided
+  const unit = responseData.unit || "unknown"; // Default to "unknown" if not provided
+  const sensorValues = responseData.values || []; // Array of sensor values
+  const readTime = responseData.timestamp || currentTime; // Default to current time if not provided
 
-    //Log the data to the console
-    console.log(" ");
-    console.log("New Sensor Reading:");
-    console.log("DeviceID:", DeviceID);
+  //Log the data to the console
+  console.log("New Sensor Reading:");
+  console.log("DeviceID:", DeviceID);
 
-    reading.SensorReadings.forEach((sensor) => {
-      const reading = sensor.Name;
-      const sensorName = sensor.Sensor;
-      const sensorType = sensor.Type;
-      const dataField = sensor.Field;
-      const sensorValue = sensor.Value;
-      const readTime = sensor.Time;
-      const location = sensor.Location;
+  try {
+    //Store the data in the InfluxDB
+    const point = new Point(sensorName)
+      .tag("deviceName", DeviceID)
+      .tag("sensor", sensorName)
+      .tag("sensorType", sensorType)
+      .tag("sensorStatus", sensorStatus)
+      .tag("unit", unit);
 
-      // Log the data to the console
-      // console.log("=======================================");
-      // console.log("Sensor: ", reading);
-      // console.log("Sensor Name:", sensorName);
-      // console.log("Sensor Type:", sensorType);
-      // console.log("Sensor Value:", sensorValue);
-      // console.log("Reading Time:", readTime);
-      // console.log("Location:", location);
-      // console.log("=======================================");
+    // Add each sensor value as a separate field
+    // If there's only one value, use "value" as the field name
+    // If there are multiple values, use "value_0", "value_1", etc.
+    if (sensorValues.length === 1) {
+      point.floatField("value", sensorValues[0]);
+    } else {
+      sensorValues.forEach((value, index) => {
+        point.floatField(`value_${index}`, value);
+      });
+    }
 
-      /**
-       *
-       *  TODO: NEED TO REWORK DATE HANDLING TO ACCOUNT FOR LACK OF TIME SERVER ON DEVICE
-       *  DEVICE WILL BE SET TO RETURN A NULL OR PLACEHOLDER VALUE
-       * WHEN A REQUEST IS NULL, NEED TO CRREATE A CURRENT TIMESTAMP SERVERSIDE
-       * TO MATCH THE UTC FORMAT FOR INFLUX
-       *
-       *
-       */
+    // Set the timestamp
+    point.timestamp(readTime > 1000000 ? readTime : currentTime);
 
-      //Get the current time
-      const currentTime = new Date();
-      // // Convert the UTC timestamp to local time
-      // const localTime = moment.utc(readTime).local();
+    writeDataToInfluxDB(point).then((result) => {
+      if (!result) {
+        console.log("Failed to store the " + { reading } + " in the database");
 
-      // // Convert the local time to a Unix timestamp (seconds since epoch)
-      // const timestamp = localTime.valueOf() / 1000;
-      //Get the current time
-      try {
-        //Store the data in the InfluxDB
-        const point = new Point(reading)
-          .tag("sensor", sensorName)
-          .tag("sensorType", sensorType)
-          .tag("location", location)
-          .tag("deviceName", DeviceID)
-          .floatField(dataField, sensorValue)
-          .timestamp(readTime > 1000000 ? readTime : currentTime);
-
-        writeDataToInfluxDB(point).then((result) => {
-          if (!result) {
-            console.log(
-              "Failed to store the " + { reading } + " in the database"
-            );
-          }
-        });
-      } catch (error) {
-        console.error(error);
-        res.status(500).json({
-          message: "There was an error communication with the Influx server",
-        });
+        throw new Error("Failed to store the reading in the database");
       }
-    });
-  }); //End of Loop
 
-  console.log("Sensor Data Stored");
-  res.status(201).json({ message: "Sensor Data Stored" });
+      console.log("Sensor Data Stored Successfully in InfluxDB");
+
+      //log result
+      console.log("InfluxDB Write Result:", result);
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "There was an error communication with the Influx server",
+    });
+  }
+
+  // Log the successful storage of sensor data
+  console.log("Sensor Data Successfully Stored in InfluxDB");
+  res.status(200).json({ message: "Sensor Data Successfully Stored" });
+}
+
+/***************************************
+ * Helper Function to validate sensor data
+ * ************************************/
+function validateSensorData(responseData) {
+  const errors = [];
+
+  // Check if responseData exists
+  if (!responseData) {
+    console.log("Error: No sensor data received in request body");
+    errors.push("No sensor data received");
+    return { isValid: false, errors };
+  }
+
+  // Check if responseData is an object
+  if (typeof responseData !== "object") {
+    console.log("Error: Invalid data format - expected object, received:", typeof responseData);
+    errors.push("Invalid data format - expected JSON object");
+    return { isValid: false, errors };
+  }
+
+  // Validate required fields based on the sample structure
+  const requiredFields = ["deviceId", "sensorId", "sensorType", "timestamp", "values", "status", "unit"];
+  const missingFields = requiredFields.filter((field) => !(field in responseData));
+
+  if (missingFields.length > 0) {
+    console.log("Error: Missing required fields:", missingFields);
+    errors.push(`Missing required fields: ${missingFields.join(", ")}`);
+  }
+
+  // Validate data types and values
+  if (responseData.deviceId !== undefined) {
+    if (typeof responseData.deviceId !== "string" || responseData.deviceId.trim() === "") {
+      console.log("Error: Invalid deviceId - must be a non-empty string");
+      errors.push("Invalid deviceId - must be a non-empty string");
+    }
+  }
+
+  if (responseData.sensorId !== undefined) {
+    if (typeof responseData.sensorId !== "string" || responseData.sensorId.trim() === "") {
+      console.log("Error: Invalid sensorId - must be a non-empty string");
+      errors.push("Invalid sensorId - must be a non-empty string");
+    }
+  }
+
+  if (responseData.sensorType !== undefined) {
+    if (typeof responseData.sensorType !== "string" || responseData.sensorType.trim() === "") {
+      console.log("Error: Invalid sensorType - must be a non-empty string");
+      errors.push("Invalid sensorType - must be a non-empty string");
+    }
+  }
+
+  if (responseData.values !== undefined) {
+    if (!Array.isArray(responseData.values) || responseData.values.length === 0) {
+      console.log("Error: Invalid values - must be a non-empty array");
+      errors.push("Invalid values - must be a non-empty array");
+    } else {
+      // Check if all values are numbers
+      const invalidValues = responseData.values.filter(
+        (value) => typeof value !== "number" || isNaN(value)
+      );
+      if (invalidValues.length > 0) {
+        console.log("Error: Invalid sensor values - all values must be numbers:", invalidValues);
+        errors.push("Invalid sensor values - all values must be numbers");
+      }
+    }
+  }
+
+  if (responseData.timestamp !== undefined) {
+    if (typeof responseData.timestamp !== "number" || responseData.timestamp <= 0) {
+      console.log("Error: Invalid timestamp - must be a positive number");
+      errors.push("Invalid timestamp - must be a positive number");
+    }
+  }
+
+  if (responseData.status !== undefined) {
+    if (typeof responseData.status !== "number") {
+      console.log("Error: Invalid status - must be a number");
+      errors.push("Invalid status - must be a number");
+    }
+  }
+
+  if (responseData.unit !== undefined) {
+    if (typeof responseData.unit !== "string") {
+      console.log("Error: Invalid unit - must be a string");
+      errors.push("Invalid unit - must be a string");
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors: errors,
+    missingFields: missingFields.length > 0 ? missingFields : undefined,
+  };
 }
 
 // Export the functions
