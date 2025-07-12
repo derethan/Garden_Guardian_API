@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const sensorController_1 = require("../controllers/sensorController");
+const sensorDBFunctions_1 = require("../controllers/sensorDBFunctions");
+const userController_1 = require("../controllers/userController");
+const router = (0, express_1.Router)();
+router.post("/sendData", sensorController_1.storeSensorData);
+router.get("/readSensor/latest", sensorDBFunctions_1.getLastReading);
+router.get("/readSensor/latest/all", sensorDBFunctions_1.getLastReadingAll);
+router.get("/readSensor", sensorDBFunctions_1.getSensorReading);
+router.get("/testconnection", sensorController_1.testconnection);
+router.get("/status", sensorController_1.getDeviceStatus);
+router.get("/status/sensor", userController_1.verifyToken, sensorController_1.getSensorStatus);
+router.get("/ping", sensorController_1.updateDevicePing);
+exports.default = router;
