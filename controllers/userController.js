@@ -5,6 +5,7 @@
 const jwt = require("jsonwebtoken");
 
 const sensorController = require("./sensorController");
+const { getUserInfoFromRequest } = require("../utils/tokenHelper");
 
 const messages = {
   emailExists: "A user has already registered with this email address, Please enter another email address to continue.",
@@ -307,6 +308,64 @@ async function checkForDevice(req, res) {
   } catch (error) {
     console.error(messages.dbconnectError, error);
     return res.status(500).json({ message: messages.dbconnectError });
+  }
+}
+
+// Route for deleting a device from the user account
+async function deleteDevice(req, res) {
+  // Get user info from token
+  let userInfo = null;
+  try {
+    userInfo = getUserInfoFromRequest(req);
+    if (!userInfo) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+  } catch (error) {
+    console.error("Error decoding token:", error);
+    return res.status(400).json({ error: "Invalid token format" });
+  }
+
+  // Extract the device_id from request parameters
+  const { device_id } = req.params;
+
+  if (!device_id) {
+    return res.status(400).json({ error: "Device ID is required" });
+  }
+
+  console.log(`Attempting to delete device ${device_id} for user ${userInfo.email}`);
+
+  // Check if the device is associated with the user
+  const checkSql = "SELECT * FROM user_device WHERE user_id = ? AND device_id = ?";
+  const checkValues = [userInfo.email, device_id];
+
+  try {
+    const existingDevice = await dbQueryPromise(checkSql, checkValues);
+
+    if (existingDevice.length === 0) {
+      return res.status(404).json({ 
+        error: "Device not found or not associated with your account" 
+      });
+    }
+
+    // Delete the device association from user_device table
+    const deleteSql = "DELETE FROM user_device WHERE user_id = ? AND device_id = ?";
+    const deleteValues = [userInfo.email, device_id];
+
+    const result = await dbQueryPromise(deleteSql, deleteValues);
+
+    if (result.affectedRows > 0) {
+      console.log(`Device ${device_id} successfully removed from user ${userInfo.email} account`);
+      res.status(200).json({ 
+        message: "Device has been successfully removed from your account",
+        device_id: device_id
+      });
+    } else {
+      res.status(500).json({ error: "Failed to delete device association" });
+    }
+
+  } catch (error) {
+    console.error("Error deleting device:", error);
+    res.status(500).json({ error: messages.dbconnectError });
   }
 }
 
@@ -774,6 +833,7 @@ module.exports = {
 
   addDevice,
   checkForDevice,
+  deleteDevice,
 
   addGarden,
   getGardens,

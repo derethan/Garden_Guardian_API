@@ -16,6 +16,7 @@ const axios = require("axios");
  * ************************************/
 const dbQueryPromise = require("../db/dbConnect"); // Import dbconnect.js
 const { queryAIForPlantInfo } = require("./aiController");
+const { getUserInfoFromRequest } = require("../utils/tokenHelper");
 
 /************************************************************
  *  Functions to Handle API Requests to the GG Database
@@ -129,7 +130,9 @@ const getAllPlants = async (req, res) => {
 const getPlantVarieties = async (req, res) => {
   const plant = req.params.plant || null;
 
-  const SQL = isNaN(plant) ? `SELECT * FROM plants_variety WHERE plant = ?` : `SELECT * FROM plants_variety WHERE id = ?`;
+  const SQL = isNaN(plant)
+    ? `SELECT * FROM plants_variety WHERE plant = ?`
+    : `SELECT * FROM plants_variety WHERE id = ?`;
   const values = [plant];
 
   try {
@@ -171,7 +174,9 @@ const getPlantDetails = async (req, res) => {
 const getVarietyDetails = async (req, res) => {
   const variety = req.params.variety || null;
 
-  const SQL = isNaN(variety) ? `SELECT * FROM plants_variety WHERE name = ?` : `SELECT * FROM plants_variety WHERE id = ?`;
+  const SQL = isNaN(variety)
+    ? `SELECT * FROM plants_variety WHERE name = ?`
+    : `SELECT * FROM plants_variety WHERE id = ?`;
 
   const values = [variety];
 
@@ -194,31 +199,14 @@ const getVarietyDetails = async (req, res) => {
   }
 };
 
-const getTaggedPlant = async (req, res) => {
-  const tagId = req.params.tagId;
-  const sql = "SELECT plant_id FROM tag_mappings WHERE tag_id = ?";
-  const values = [tagId];
-
-  try {
-    const response = await dbQueryPromise(sql, values);
-
-    if (response.length === 0) {
-      return res.status(404).json({ error: "Tag not found" });
-    }
-
-    res.status(200).json({ plantId: response[0].plant_id });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server Connection Error: Failed to fetch data from the the Database" });
-  }
-};
-
 /************************************************************
  * Functions to Add/Remove/Update Plants in the GG Database
  * ***********************************************************/
 //Function to query the Database for the plant details
 const queryPlantDetails = async (plant) => {
-  const SQL = isNaN(plant) ? `SELECT * FROM plants WHERE LOWER(name) = LOWER(?)` : `SELECT * FROM plants WHERE id = ?`;
+  const SQL = isNaN(plant)
+    ? `SELECT * FROM plants WHERE LOWER(name) = LOWER(?)`
+    : `SELECT * FROM plants WHERE id = ?`;
   const values = [plant];
 
   try {
@@ -327,6 +315,170 @@ const addVarietyToDB = async (plant, variety, properties) => {
   }
 };
 
+/************************************************************
+ * Functions to Add/Remove/Update Tags in the GG Database
+ * ***********************************************************/
+
+const getTaggedPlant = async (req, res) => {
+  const tagId = req.params.tagId;
+
+  console.log(`Fetching plant for tag ID: ${tagId}`);
+
+  // Get user info from token if present
+  let userInfo = null;
+  try {
+    userInfo = getUserInfoFromRequest(req);
+    if (userInfo) {
+      console.log(`User ID from token: ${userInfo.id}`);
+      console.log(`User email: ${userInfo.email}`);
+      // You can use userInfo for further processing if needed
+    }
+  } catch (error) {
+    console.error("Error decoding token:", error);
+    return res.status(400).json({ error: "Invalid token format" });
+  }
+
+  // Ensure the tag_mappings table exists
+  await ensureTagMappingsTableExists();
+
+  const sql = "SELECT plant_id FROM tag_mappings WHERE tag_id = ? AND user_id = ?";
+  const values = [tagId, userInfo?.id];
+
+  // Validate tagId and userInfo
+  if (!tagId || !userInfo?.id) {
+    return res.status(400).json({ error: "Tag ID and User ID are required" });
+  }
+
+  // Log
+  console.log(`Fetching plant for tag ID: ${tagId}`);
+
+  try {
+    const response = await dbQueryPromise(sql, values);
+
+    console.log(`Response from database: ${JSON.stringify(response)}`);
+
+    if (response.length === 0) {
+      return res.status(404).json({ error: "Tag not found" });
+    }
+
+    res.status(200).json({ plantId: response[0].plant_id });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ error: "Server Connection Error: Failed to fetch data from the the Database" });
+  }
+};
+
+// Route to add or update a tag mapping
+const addOrUpdateTag = async (req, res) => {
+  const { tagId, plantId } = req.body;
+
+  if (!tagId || !plantId) {
+    return res.status(400).json({ error: "Both tagId and plantId are required" });
+  }
+
+  // Ensure the tag_mappings table exists
+  await ensureTagMappingsTableExists();
+
+  try {
+    // Check if tag already exists
+    const checkSql = "SELECT * FROM tag_mappings WHERE tag_id = ?";
+    const existingTag = await dbQueryPromise(checkSql, [tagId]);
+
+    let sql, values, message;
+
+    if (existingTag.length > 0) {
+      // Update existing tag
+      sql = "UPDATE tag_mappings SET plant_id = ? WHERE tag_id = ?";
+      values = [plantId, tagId];
+      message = "Tag mapping updated successfully";
+    } else {
+      // Insert new tag
+      sql = "INSERT INTO tag_mappings (tag_id, plant_id) VALUES (?, ?)";
+      values = [tagId, plantId];
+      message = "Tag mapping added successfully";
+    }
+
+    await dbQueryPromise(sql, values);
+    console.log(`Tag ${tagId} mapped to plant ${plantId}`);
+
+    res.status(200).json({ message, tagId, plantId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server Connection Error: Failed to add/update tag mapping" });
+  }
+};
+
+// Route to delete a tag mapping
+const deleteTag = async (req, res) => {
+  const tagId = req.params.tagId;
+
+  if (!tagId) {
+    return res.status(400).json({ error: "Tag ID is required" });
+  }
+
+  // Ensure the tag_mappings table exists
+  await ensureTagMappingsTableExists();
+
+  try {
+    const sql = "DELETE FROM tag_mappings WHERE tag_id = ?";
+    const result = await dbQueryPromise(sql, [tagId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Tag not found" });
+    }
+
+    console.log(`Tag ${tagId} deleted`);
+    res.status(200).json({ message: "Tag mapping deleted successfully", tagId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server Connection Error: Failed to delete tag mapping" });
+  }
+};
+
+// Route to get all tag mappings
+const getAllTags = async (req, res) => {
+  // Ensure the tag_mappings table exists
+  await ensureTagMappingsTableExists();
+
+  try {
+    const sql = "SELECT * FROM tag_mappings";
+    const response = await dbQueryPromise(sql);
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server Connection Error: Failed to fetch tag mappings" });
+  }
+};
+
+// Function to ensure tag_mappings table exists
+const ensureTagMappingsTableExists = async () => {
+  const createTableSql = `
+    CREATE TABLE IF NOT EXISTS tag_mappings (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tag_id VARCHAR(255) NOT NULL,
+      plant_id INT NOT NULL,
+      user_id INT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY unique_tag_user (tag_id, user_id),
+      INDEX idx_tag_id (tag_id),
+      INDEX idx_plant_id (plant_id),
+      INDEX idx_user_id (user_id)
+    )
+  `;
+
+  try {
+    await dbQueryPromise(createTableSql);
+    console.log("Tag mappings table verified/created");
+  } catch (error) {
+    console.error("Error creating tag_mappings table:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   getAllPlants,
   getPlantDetails,
@@ -336,4 +488,7 @@ module.exports = {
   queryPlantDetails,
   updatePlantDescription,
   getTaggedPlant,
+  addOrUpdateTag,
+  deleteTag,
+  getAllTags,
 };

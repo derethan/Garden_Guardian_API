@@ -218,8 +218,7 @@ async function storeSensorData(req, res) {
   const responseData = req.body;
 
   // log the full request
-  console.log("Test Connection Request Received");
-  console.log("Response Data:", responseData);
+  // console.log("Response Data:", responseData);
 
   // Validate the sensor data using the helper function
   const validation = validateSensorData(responseData);
@@ -288,10 +287,7 @@ async function storeSensorData(req, res) {
         throw new Error("Failed to store the reading in the database");
       }
 
-      console.log("Sensor Data Stored Successfully in InfluxDB");
 
-      //log result
-      console.log("InfluxDB Write Result:", result);
     });
   } catch (error) {
     console.error(error);

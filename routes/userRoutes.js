@@ -10,21 +10,14 @@ router.post("/changePassword", userController.changePassword);
 // User device routes
 router.post("/addDevice", userController.addDevice);
 router.get("/checkForDevice", userController.checkForDevice);
+router.delete("/deleteDevice/:device_id", userController.deleteDevice);
 
 // Garden routes
 //CREATE
-router.post(
-  "/:userID/gardens",
-  userController.verifyToken,
-  userController.addGarden
-);
+router.post("/:userID/gardens", userController.verifyToken, userController.addGarden);
 
 //READ
-router.get(
-  "/:userID/gardens",
-  userController.verifyToken,
-  userController.getGardens
-);
+router.get("/:userID/gardens", userController.verifyToken, userController.getGardens);
 
 //DELETE
 router.delete(
@@ -35,17 +28,9 @@ router.delete(
 
 // Group routes
 //CREATE
-router.post(
-  "/:userID/gardens/groups",
-  userController.verifyToken,
-  userController.addGardenGroup
-);
+router.post("/:userID/gardens/groups", userController.verifyToken, userController.addGardenGroup);
 //READ
-router.get(
-  "/:userID/gardens/groups",
-  userController.verifyToken,
-  userController.getGardenGroups
-);
+router.get("/:userID/gardens/groups", userController.verifyToken, userController.getGardenGroups);
 
 //DELETE
 router.delete(
@@ -54,21 +39,12 @@ router.delete(
   userController.deleteGardenGroup
 );
 
-
 // Plant routes
 //CREATE
-router.post(
-  "/:userID/gardens/plants",
-  userController.verifyToken,
-  userController.addGardenPlant
-);
+router.post("/:userID/gardens/plants", userController.verifyToken, userController.addGardenPlant);
 
 //READ
-router.get(
-  "/:userID/gardens/plants",
-  userController.verifyToken,
-  userController.getGardenPlants
-);
+router.get("/:userID/gardens/plants", userController.verifyToken, userController.getGardenPlants);
 
 //DELETE
 router.delete(
@@ -84,12 +60,7 @@ router.put(
   userController.updateGardenPlant
 );
 
-
 // Used for Authentication, Token Verification for protected Pages
-router.get(
-  "/protected",
-  userController.verifyToken,
-  userController.protectedRoute
-);
+router.get("/protected", userController.verifyToken, userController.protectedRoute);
 
 module.exports = router;
