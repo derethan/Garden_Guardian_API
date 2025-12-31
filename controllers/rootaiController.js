@@ -86,7 +86,7 @@ const QueryAIWithQuestion = async (message, conversation = []) => {
   });
 
   const data = {
-    model: "gpt-3.5-turbo",
+    model: "gpt-4o-mini",
     messages: conversation,
     temperature: 0.1,
   };
